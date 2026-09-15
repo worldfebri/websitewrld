@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>World MD System</title>
+<title>World MD Website</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -274,6 +274,7 @@ const NAV_PUBLIC = [
   { id: "p-dashboard", label: "Ringkasan", icon: "◈" },
   { id: "apikeys", label: "Apikey Shop", icon: "◆" },
   { id: "quotas", label: "Quota Shop", icon: "▣" },
+  { id: "p-addowner", label: "Add/Hapus Owner", icon: "☎" },
   { id: "aiworld", label: "AI World", icon: "∴" },
   { id: "p-orders", label: "Pesanan Saya", icon: "🧾" },
 ];
@@ -994,6 +995,7 @@ function render() {
     quotas: viewQuotasPublic, "a-quotas": viewQuotasAdmin,
     aiworld: viewAiWorldChat, "aiworld-config": viewAiWorldConfig,
     "p-orders": viewMyOrders,
+    "p-addowner": viewAddOwnerSelf,
     owners: viewOwners, roles: viewRoles, warns: viewWarns, promo: viewPromo,
     migration: viewMigration,
     "settings-general": viewSettingsGeneral,
@@ -1058,6 +1060,16 @@ function matchesIdentity(value, identities) {
   return identities.some((id) => id && String(id).trim().toLowerCase() === v);
 }
 
+// Normalisasi nomor WA — sama persis seperti normalizeNumber() di lib/ownerDb.js
+// script bot: 08xxx -> 628xxx, 8xxx -> 628xxx, 62xxx tetap, sisanya cuma ambil digit.
+function normalizeOwnerNumber(n) {
+  let d = String(n || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.startsWith("0")) d = "62" + d.slice(1);
+  else if (d.startsWith("8")) d = "62" + d;
+  return d;
+}
+
 function viewMyOrders() {
   if (!state.currentUser) {
     return `
@@ -1069,7 +1081,7 @@ function viewMyOrders() {
   const identities = [state.currentUser.username, state.currentUser.telegramId, state.currentUser.telegramUsername].filter(Boolean);
   const myKeys = state.apikeys.filter((k) => matchesIdentity(k.buyer, identities));
   const myQuotas = state.quotas.filter((q) => matchesIdentity(q.buyer, identities));
-  const myOwners = state.currentUser.telegramId ? state.owners.filter((o) => matchesIdentity(o.number, identities) || matchesIdentity(o.label, identities)) : [];
+  const myOwners = state.currentUser.telegramId ? state.owners.filter((o) => matchesIdentity(o.addedBy, identities) || matchesIdentity(o.number, identities) || matchesIdentity(o.label, identities)) : [];
   return `
     <div class="view">
       ${sectionHead("Pesanan Saya", `Riwayat belanja ${state.currentUser.username}`, state.currentUser.telegramId ? `Termasuk riwayat dari Telegram ID/Username yang ditautkan: ${esc(state.currentUser.telegramId)}.` : `Tautkan Telegram ID/Username di menu Profil supaya riwayat dari bot ikut muncul di sini.`)}
@@ -1097,6 +1109,109 @@ function viewMyOrders() {
       </div>` : ""}
     </div>`;
 }
+
+// ---------------------------------------------------------------------------
+// Add/Hapus Owner (self-service, publik) — versi website dari perintah
+// /addowner & /delowner di bot WhatsApp. Butuh login + Telegram sudah
+// tertaut (verifikasi lewat menu Profil) supaya nomor yang menambahkan
+// jelas identitasnya, dan kuota dipotong dari kuota yang sudah dibeli di
+// Quota Shop (mengikuti pola addedBy/kuota di lib/ownerDb.js pada bot).
+// ---------------------------------------------------------------------------
+
+function getMyOwnerQuotaInfo() {
+  const u = state.currentUser;
+  if (!u) return { identities: [], totalQuota: 0, used: 0, remaining: 0, myOwners: [] };
+  const identities = [u.username, u.telegramId, u.telegramUsername].filter(Boolean);
+  const totalQuota = state.quotas
+    .filter((q) => matchesIdentity(q.buyer, identities) && (q.type === "permanent" || q.expiresAt > now()))
+    .reduce((sum, q) => sum + Number(q.amount || 0), 0);
+  const myOwners = state.owners.filter((o) => matchesIdentity(o.addedBy, identities));
+  const used = myOwners.length;
+  return { identities, totalQuota, used, remaining: Math.max(0, totalQuota - used), myOwners };
+}
+
+function viewAddOwnerSelf() {
+  if (!state.currentUser) {
+    return `
+      <div class="view">
+        ${sectionHead("Add/Hapus Owner", "Tambah & hapus owner sendiri", "Versi website dari perintah /addowner dan /delowner di bot WhatsApp. Masuk atau daftar dulu untuk pakai fitur ini.")}
+        <div class="empty">Belum masuk. Klik "Masuk / Daftar" di kanan atas.</div>
+      </div>`;
+  }
+  if (!state.currentUser.telegramId) {
+    return `
+      <div class="view">
+        ${sectionHead("Add/Hapus Owner", "Tambah & hapus owner sendiri", "Versi website dari perintah /addowner dan /delowner di bot WhatsApp.")}
+        <div class="panel">
+          <div class="panel-title">Verifikasi Telegram dulu</div>
+          <p class="desc" style="margin-bottom:14px;">Supaya nomor yang menambahkan owner jelas identitasnya (dan tidak bisa dipalsukan orang lain), fitur ini baru aktif setelah Telegram kamu tertaut. Buka menu Profil untuk verifikasi.</p>
+          <button class="btn btn-primary" id="addownerGoProfile">Buka Profil</button>
+        </div>
+      </div>`;
+  }
+  const info = getMyOwnerQuotaInfo();
+  return `
+    <div class="view">
+      ${sectionHead("Add/Hapus Owner", "Tambah & hapus owner sendiri", "Versi website dari perintah /addowner dan /delowner di bot WhatsApp. Kuota dipotong dari kuota addowner yang sudah kamu beli di Quota Shop.")}
+      <div class="stat-row">
+        <div class="stat"><div class="stat-value">${info.totalQuota}</div><div class="stat-label">Kuota addowner kamu</div></div>
+        <div class="stat"><div class="stat-value">${info.used}</div><div class="stat-label">Sudah terpakai</div></div>
+        <div class="stat"><div class="stat-value">${info.remaining}</div><div class="stat-label">Sisa kuota</div></div>
+      </div>
+      ${info.totalQuota === 0 ? `<div class="empty">Kamu belum punya kuota addowner. <a href="#" data-goto="quotas" style="color:var(--amber);">Beli kuota dulu di Quota Shop</a>.</div>` : ""}
+      <div class="panel">
+        <div class="panel-title">/addowner — Tambah owner baru</div>
+        <div class="form-row">
+          <input class="input" id="myOwnerNumber" placeholder="Nomor WA, contoh 08123456789" ${info.remaining <= 0 ? "disabled" : ""} />
+          <input class="input" id="myOwnerLabel" placeholder="Catatan (opsional)" ${info.remaining <= 0 ? "disabled" : ""} />
+          <button class="btn btn-violet" id="myOwnerAddBtn" ${info.remaining <= 0 ? "disabled" : ""}>Tambah owner</button>
+        </div>
+        ${info.remaining <= 0 && info.totalQuota > 0 ? `<p class="desc" style="margin-top:10px;">Kuota kamu sudah habis. Hapus salah satu owner di bawah atau beli kuota tambahan.</p>` : ""}
+      </div>
+      <div class="panel">
+        <div class="panel-title">/delowner — Owner yang kamu tambahkan</div>
+        ${info.myOwners.length === 0 ? `<div class="empty">Belum ada owner yang kamu tambahkan lewat website ini.</div>` : `
+        <table class="table"><thead><tr><th>Nomor</th><th>Catatan</th><th>Ditambahkan</th><th></th></tr></thead><tbody>
+          ${info.myOwners.map((o) => `<tr><td class="mono">${esc(o.number)}</td><td>${esc(o.label) || "—"}</td><td class="muted">${fmtDate(o.addedAt)}</td><td><button class="btn btn-ghost btn-danger" data-my-remove-owner="${o.id}">Hapus</button></td></tr>`).join("")}
+        </tbody></table>`}
+      </div>
+    </div>`;
+}
+bindHandlers["p-addowner"] = () => {
+  const goProfileBtn = document.getElementById("addownerGoProfile");
+  if (goProfileBtn) goProfileBtn.addEventListener("click", () => openUserProfileModal());
+
+  document.querySelectorAll('[data-goto="quotas"]').forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault(); state.tab = "quotas"; render();
+  }));
+
+  const addBtn = document.getElementById("myOwnerAddBtn");
+  if (addBtn) addBtn.addEventListener("click", () => {
+    const info = getMyOwnerQuotaInfo();
+    if (info.remaining <= 0) return notify("Kuota addowner kamu habis.");
+    const raw = document.getElementById("myOwnerNumber").value.trim();
+    const label = document.getElementById("myOwnerLabel").value.trim();
+    if (!raw) return notify("Nomor tidak boleh kosong.");
+    const number = normalizeOwnerNumber(raw);
+    if (!number) return notify("Nomor tidak valid.");
+    if (state.owners.some((o) => o.number === number)) return notify("Nomor itu sudah ada di Owner DB.");
+    const addedBy = state.currentUser.telegramId;
+    state.owners.unshift({ id: uid(), number, label, addedAt: now(), addedBy });
+    saveKey("wm:owners", state.owners);
+    notify("Owner ditambahkan (/addowner).");
+    render();
+  });
+
+  document.querySelectorAll("[data-my-remove-owner]").forEach((btn) => btn.addEventListener("click", () => {
+    const info = getMyOwnerQuotaInfo();
+    const target = info.myOwners.find((o) => o.id === btn.dataset.myRemoveOwner);
+    if (!target) return;
+    state.owners = state.owners.filter((o) => o.id !== target.id);
+    saveKey("wm:owners", state.owners);
+    notify("Owner dihapus (/delowner). Kuota kamu kembali.");
+    render();
+  }));
+};
 
 // ---------------------------------------------------------------------------
 // Admin Dashboard
@@ -1153,8 +1268,8 @@ function viewOwners() {
         <button class="btn btn-violet" id="ownerAddBtn">Tambah owner</button>
       </div>
       ${state.owners.length === 0 ? `<div class="empty">Owner DB masih kosong. Tambahkan nomor pertama di atas.</div>` : `
-      <table class="table"><thead><tr><th>Nomor</th><th>Catatan</th><th>Ditambahkan</th><th></th></tr></thead><tbody>
-        ${state.owners.map((o) => `<tr><td class="mono">${esc(o.number)}</td><td>${esc(o.label) || "—"}</td><td class="muted">${fmtDate(o.addedAt)}</td><td><button class="btn btn-ghost btn-danger" data-remove-owner="${o.id}">Hapus</button></td></tr>`).join("")}
+      <table class="table"><thead><tr><th>Nomor</th><th>Catatan</th><th>Oleh</th><th>Ditambahkan</th><th></th></tr></thead><tbody>
+        ${state.owners.map((o) => `<tr><td class="mono">${esc(o.number)}</td><td>${esc(o.label) || "—"}</td><td class="muted">${esc(o.addedBy) || "admin"}</td><td class="muted">${fmtDate(o.addedAt)}</td><td><button class="btn btn-ghost btn-danger" data-remove-owner="${o.id}">Hapus</button></td></tr>`).join("")}
       </tbody></table>`}
     </div>`;
 }
@@ -1222,12 +1337,19 @@ function viewApikeysPublic() {
     .filter((n) => Number.isFinite(n) && n > 0)
     .sort((a, b) => a - b);
   const promo = currentPromoText("ak");
+  if (!state.currentUser) {
+    return `
+      <div class="view">
+        ${sectionHead("Apikey Shop", "Beli apikey", `Harga ${rupiah(s.pricePerUnit)} per unit. Tersedia pembelian hingga 10.000 unit sekaligus. 25 apikey pertama tetap gratis per hari sebagai warming up.`)}
+        <div class="empty">Masuk atau daftar dulu supaya pembelian tercatat ke akunmu dan muncul di "Pesanan Saya". Klik "Masuk / Daftar" di kanan atas.</div>
+      </div>`;
+  }
   return `
     <div class="view">
       ${sectionHead("Apikey Shop", "Beli apikey", `Harga ${rupiah(s.pricePerUnit)} per unit. Tersedia pembelian hingga 10.000 unit sekaligus. 25 apikey pertama tetap gratis per hari sebagai warming up.`)}
       ${promo ? `<div class="promo-banner">📣 ${esc(promo)}</div>` : ""}
       <div class="form-row">
-        ${state.currentUser ? `<div class="price-tag">Beli sebagai: ${esc(state.currentUser.username)}</div>` : `<input class="input" id="akBuyer" placeholder="Nama atau ID kamu" />`}
+        <div class="price-tag">Beli sebagai: ${esc(state.currentUser.username)}</div>
         <input class="input" id="akBotNumber" placeholder="Nomor bot, contoh 6281234567890" />
         <select class="input" id="akAmount">${s.options.map((o) => `<option value="${o}">${o} unit</option>`).join("")}</select>
         <div class="price-tag" id="akPrice">${rupiah(s.options[0] * s.pricePerUnit)}</div>
@@ -1238,15 +1360,15 @@ function viewApikeysPublic() {
     </div>`;
 }
 bindHandlers.apikeys = () => {
+  if (!state.currentUser) return;
   const s = state.settings.apikeyShop;
   const updatePrice = () => { document.getElementById("akPrice").textContent = rupiah(Number(document.getElementById("akAmount").value) * s.pricePerUnit); };
   document.getElementById("akAmount").addEventListener("change", updatePrice);
   const issueBtn = document.getElementById("akIssueBtn");
   if (issueBtn) issueBtn.addEventListener("click", () => {
-    const buyer = state.currentUser ? state.currentUser.username : document.getElementById("akBuyer").value.trim();
+    const buyer = state.currentUser.username;
     const botNumber = document.getElementById("akBotNumber").value.trim();
     const amount = Number(document.getElementById("akAmount").value);
-    if (!buyer) return notify("Isi nama/ID kamu dulu.");
     if (!botNumber) return notify("Isi nomor bot yang mau dipasangi apikey.");
     const price = amount * s.pricePerUnit;
     const issue = () => {
@@ -1287,12 +1409,30 @@ bindHandlers["a-apikeys"] = () => {
 function viewQuotasPublic() {
   const s = state.settings.quotaShop;
   const promo = currentPromoText("q");
+  if (!state.currentUser) {
+    return `
+      <div class="view">
+        ${sectionHead("Quota Shop", "Beli kuota add owner", `Temp ${rupiah(s.priceTemp)}/kuota (berlaku ${s.tempDurationDays} hari), permanen ${rupiah(s.pricePermanent)}/kuota.`)}
+        <div class="empty">Masuk atau daftar dulu supaya kuota tercatat ke akunmu. Klik "Masuk / Daftar" di kanan atas.</div>
+      </div>`;
+  }
+  if (!state.currentUser.telegramId) {
+    return `
+      <div class="view">
+        ${sectionHead("Quota Shop", "Beli kuota add owner", `Temp ${rupiah(s.priceTemp)}/kuota (berlaku ${s.tempDurationDays} hari), permanen ${rupiah(s.pricePermanent)}/kuota.`)}
+        <div class="panel">
+          <div class="panel-title">Verifikasi Telegram dulu</div>
+          <p class="desc" style="margin-bottom:14px;">Kuota di sini dipakai lewat halaman "Add/Hapus Owner" yang mencocokkan Telegram ID kamu. Supaya kuota yang kamu beli tidak nyasar ke akun lain, tautkan Telegram di Profil dulu sebelum membeli.</p>
+          <button class="btn btn-primary" id="quotaGoProfile">Buka Profil</button>
+        </div>
+      </div>`;
+  }
   return `
     <div class="view">
       ${sectionHead("Quota Shop", "Beli kuota add owner", `Temp ${rupiah(s.priceTemp)}/kuota (berlaku ${s.tempDurationDays} hari), permanen ${rupiah(s.pricePermanent)}/kuota.`)}
       ${promo ? `<div class="promo-banner">📣 ${esc(promo)}</div>` : ""}
       <div class="form-row">
-        ${state.currentUser ? `<div class="price-tag">Beli sebagai: ${esc(state.currentUser.username)}</div>` : `<input class="input" id="qBuyer" placeholder="Nama atau ID kamu" />`}
+        <div class="price-tag">Beli sebagai: ${esc(state.currentUser.username)}</div>
         <select class="input" id="qType"><option value="temp">Temporary</option><option value="permanent">Permanent</option></select>
         <select class="input" id="qAmount">${s.tempOptions.map((o) => `<option value="${o}">${o} kuota</option>`).join("")}</select>
         <div class="price-tag" id="qPrice">${rupiah(s.priceTemp * s.tempOptions[0])}</div>
@@ -1302,6 +1442,9 @@ function viewQuotasPublic() {
     </div>`;
 }
 bindHandlers.quotas = () => {
+  const goProfileBtn = document.getElementById("quotaGoProfile");
+  if (goProfileBtn) { goProfileBtn.addEventListener("click", () => openUserProfileModal()); return; }
+  if (!state.currentUser) return;
   const s = state.settings.quotaShop;
   const typeSel = document.getElementById("qType"), amtSel = document.getElementById("qAmount"), priceEl = document.getElementById("qPrice");
   const refreshAmountOptions = () => { const opts = typeSel.value === "temp" ? s.tempOptions : s.permanentOptions; amtSel.innerHTML = opts.map((o) => `<option value="${o}">${o} kuota</option>`).join(""); updatePrice(); };
@@ -1310,8 +1453,7 @@ bindHandlers.quotas = () => {
   amtSel.addEventListener("change", updatePrice);
   const buyBtn = document.getElementById("qBuyBtn");
   if (buyBtn) buyBtn.addEventListener("click", () => {
-    const buyer = state.currentUser ? state.currentUser.username : document.getElementById("qBuyer").value.trim();
-    if (!buyer) return notify("Isi nama/ID kamu dulu.");
+    const buyer = state.currentUser.username;
     const type = typeSel.value, amount = Number(amtSel.value), unit = type === "temp" ? s.priceTemp : s.pricePermanent;
     const price = unit * amount;
     const issue = () => {
