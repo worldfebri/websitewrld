@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>World MD Website</title>
+<title>World MD Website System</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -21,8 +21,11 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 .sidebar { width: 232px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--border); padding: 22px 16px; display: flex; flex-direction: column; gap: 18px; height: 100vh; position: sticky; top: 0; }
 .sidebar.mode-admin { border-right-color: rgba(183,166,255,0.35); }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
-.brand-mark { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, var(--amber), #E08E00); display: flex; align-items: center; justify-content: center; font-family: 'Sora', sans-serif; font-weight: 700; color: #1A1200; font-size: 13px; flex-shrink: 0; }
-.mode-admin .brand-mark { background: linear-gradient(135deg, var(--violet), #6E58D6); color: #14102B; }
+.brand-mark { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, var(--amber), #E08E00); display: flex; align-items: center; justify-content: center; font-family: 'Sora', sans-serif; font-weight: 700; color: #1A1200; font-size: 13px; flex-shrink: 0; animation: floatLogo 3.2s ease-in-out infinite, glowPulse 3.2s ease-in-out infinite; }
+.mode-admin .brand-mark { background: linear-gradient(135deg, var(--violet), #6E58D6); color: #14102B; animation: floatLogo 3.2s ease-in-out infinite, glowPulseViolet 3.2s ease-in-out infinite; }
+@keyframes floatLogo { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(-3deg); } }
+@keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,176,32,0); } 50% { box-shadow: 0 0 14px rgba(255,176,32,0.55); } }
+@keyframes glowPulseViolet { 0%, 100% { box-shadow: 0 0 0 rgba(183,166,255,0); } 50% { box-shadow: 0 0 14px rgba(183,166,255,0.55); } }
 .brand-title { font-family: 'Sora', sans-serif; font-weight: 600; font-size: 15px; }
 .brand-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
 .admin-flag { font-size: 10.5px; font-weight: 600; letter-spacing: 0.4px; color: var(--violet); background: rgba(183,166,255,0.12); border: 1px solid rgba(183,166,255,0.3); border-radius: 6px; padding: 3px 8px; display: inline-block; }
@@ -37,23 +40,35 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 
 .mobile-bar { display: none; }
 .main { flex: 1; padding: 34px 40px 60px; max-width: 1080px; position: relative; }
-.view { display: flex; flex-direction: column; gap: 22px; }
+.view { display: flex; flex-direction: column; gap: 22px; animation: fadeInUp 0.45s ease both; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shimmerText { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+@keyframes pulseDot { 0%, 100% { box-shadow: 0 0 0 0 rgba(52,216,198,0.55); } 70% { box-shadow: 0 0 0 6px rgba(52,216,198,0); } }
 .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .eyebrow { font-size: 12px; color: var(--amber); font-weight: 500; margin-bottom: 4px; }
 .eyebrow.violet { color: var(--violet); }
 .title { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 600; margin: 0; }
+.hero-shimmer .title {
+  background: linear-gradient(90deg, var(--text) 0%, var(--amber) 25%, var(--text) 50%, var(--amber) 75%, var(--text) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shimmerText 4.5s linear infinite;
+}
 .desc { color: var(--muted); font-size: 13.5px; margin: 6px 0 0; max-width: 62ch; line-height: 1.5; }
 .muted { color: var(--muted); }
 
 .stat-row { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--panel); flex-wrap: wrap; }
 .stat { flex: 1; min-width: 140px; padding: 16px 18px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .stat:last-child { border-right: none; }
-.stat-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--amber); }
+.stat-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--amber); display: flex; align-items: center; gap: 8px; }
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--teal); display: inline-block; animation: pulseDot 1.8s infinite; }
 .mode-admin-stats .stat-value { color: var(--violet); }
 .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; transition: transform 0.2s ease, border-color 0.2s ease; }
+.panel:hover { transform: translateY(-2px); border-color: rgba(255,176,32,0.3); }
+.mode-admin .panel:hover { border-color: rgba(183,166,255,0.3); }
 .panel-title { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
 .kv { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; gap: 12px; }
 .kv:last-child { border-bottom: none; }
@@ -68,9 +83,11 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 .inline-input { display: flex; align-items: center; gap: 8px; }
 
 .btn { border: none; border-radius: 7px; padding: 9px 16px; font-size: 13.5px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500; white-space: nowrap; }
-.btn-primary { background: var(--amber); color: #1A1200; }
+.btn-primary { background: var(--amber); color: #1A1200; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,176,32,0.3); }
 .btn-primary:hover { background: #FFC24D; }
-.btn-violet { background: var(--violet); color: #14102B; }
+.btn-violet { background: var(--violet); color: #14102B; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.btn-violet:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(183,166,255,0.3); }
 .btn-violet:hover { background: #C9BDFF; }
 .btn-secondary { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); }
 .btn-ghost { background: transparent; color: var(--muted); padding: 6px 10px; }
@@ -189,7 +206,6 @@ table.table tr:last-child td { border-bottom: none; }
 <div class="admin-corner" id="adminCorner" style="display:none;"></div>
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ---------------------------------------------------------------------------
 // WorldMarket Panel — 100% website. Berdiri sendiri, tidak terhubung ke bot
@@ -202,7 +218,26 @@ table.table tr:last-child td { border-bottom: none; }
 //    Owner DB, Role DB, Warn System, Promo Reminder, Konfigurasi AI World,
 //    Migrasi Database, dan Pengaturan (termasuk backup ke GitHub).
 //
-// Data disimpan lewat window.storage (shared = true).
+// Data operasional (owner/apikey/kuota/warn) disimpan lewat localStorage
+// bawaan browser sebagai cache, dan disinkronkan ke GitHub kalau
+// dikonfigurasi. SEMUA Pengaturan (termasuk konfigurasi GitHub, Payment
+// Gateway, Groq, dan Supabase itu sendiri) disimpan di Supabase supaya
+// begitu admin mengubah sesuatu di halaman admin, SEMUA pengunjung otomatis
+// dapat versi terbaru saat membuka website — bukan cuma tersimpan di
+// browser admin sendiri.
+//
+// Supaya pengunjung baru (browser kosong, belum pernah menyimpan apa pun)
+// tetap bisa terhubung ke Supabase itu, dua nilai di bawah ini WAJIB diisi
+// langsung di source code (sekali saja, seperti config.js pada bot
+// Telegram), lalu file ini di-upload ulang ke hosting:
+const BOOTSTRAP_SUPABASE = {
+  url: "",      // isi dengan Project URL Supabase kamu, contoh: "https://xxxx.supabase.co"
+  anonKey: "",  // isi dengan Anon public key Supabase kamu
+};
+// Setelah dua nilai ini diisi & file di-upload ulang, SEMUA pengaturan lain
+// (repo GitHub, token, API key payment, API key AI, harga toko, dst) bisa
+// diatur sepenuhnya dari halaman admin dan otomatis tersinkron ke semua
+// pengunjung lewat Supabase — tidak perlu edit source code lagi setelah ini.
 // ---------------------------------------------------------------------------
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -229,7 +264,8 @@ const DEFAULT_SETTINGS = {
   aiWorld: { enabled: true, requireTrigger: true, triggerKeywords: ["world", "worldmd", "world md", "ai world"], cooldownSeconds: 12 },
   groq: { apiKey: "", model: "llama-3.3-70b-versatile" },
   github: { repo: "", branch: "main", token: "", path: "worldmarket-database.json" },
-  supabase: { url: "", anonKey: "", table: "wm_accounts", verifyTable: "wm_verifications" },
+  githubRoles: { repo: "", branch: "main", token: "", path: "database/additional/role_db.json" },
+  supabase: { url: "", anonKey: "", table: "kv_store" },
   payment: { apiKey: "", addMdrToCustomer: false },
 };
 
@@ -250,7 +286,11 @@ const NAV_ADMIN = [
   { id: "promo", label: "Promo Reminder", icon: "»" },
   { id: "aiworld-config", label: "Konfigurasi AI World", icon: "∴" },
   { id: "migration", label: "Migrasi Database", icon: "⇄" },
-  { id: "settings", label: "Pengaturan", icon: "⚙" },
+  { id: "settings-general", label: "Pengaturan Umum", icon: "⚙" },
+  { id: "settings-github", label: "GitHub", icon: "⌥" },
+  { id: "settings-payment", label: "Payment Gateway", icon: "◈" },
+  { id: "settings-supabase", label: "Database Akun", icon: "⌗" },
+  { id: "settings-accounts", label: "Akun Admin & User", icon: "☺" },
 ];
 
 let state = {
@@ -274,45 +314,83 @@ async function hashPassword(pw) {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function getSupabase() {
-  const cfg = state.settings.supabase;
-  if (!cfg || !cfg.url || !cfg.anonKey) return null;
-  if (typeof window.supabase === "undefined" || !window.supabase.createClient) return null;
-  const key = cfg.url + "|" + cfg.anonKey;
-  if (!state._sb || state._sbKey !== key) { state._sb = window.supabase.createClient(cfg.url, cfg.anonKey); state._sbKey = key; }
-  return state._sb;
+// ---------------------------------------------------------------------------
+// Supabase lewat REST langsung (tanpa library supabase-js) — satu tabel
+// generik "kv_store" (key, value jsonb) dipakai untuk SEMUA data bersama:
+// pengaturan situs, akun user, dan permintaan verifikasi Telegram. Setiap
+// bagian data punya "key" tetap sendiri di dalam tabel yang sama.
+// ---------------------------------------------------------------------------
+
+function sbConfig() {
+  const local = state.settings.supabase;
+  return local && local.url && local.anonKey ? local : BOOTSTRAP_SUPABASE;
+}
+function supaHeaders(extra) {
+  const cfg = sbConfig();
+  return Object.assign({ apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}`, "Content-Type": "application/json" }, extra || {});
+}
+function kvTable() { return state.settings.supabase?.table || "kv_store"; }
+async function kvGet(key) {
+  const cfg = sbConfig();
+  if (!cfg.url || !cfg.anonKey) return null;
+  try {
+    const res = await fetch(`${cfg.url}/rest/v1/${kvTable()}?key=eq.${encodeURIComponent(key)}&select=value`, { headers: supaHeaders() });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows.length ? rows[0].value : null;
+  } catch (e) { console.warn(`kvGet(${key}) gagal:`, e.message); return null; }
+}
+async function kvSet(key, value) {
+  const cfg = sbConfig();
+  if (!cfg.url || !cfg.anonKey) return false;
+  try {
+    const res = await fetch(`${cfg.url}/rest/v1/${kvTable()}`, {
+      method: "POST",
+      headers: supaHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }),
+      body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
+    });
+    return res.ok;
+  } catch (e) { console.warn(`kvSet(${key}) gagal:`, e.message); return false; }
 }
 
+// --- Sinkronisasi Pengaturan (semua yang diatur admin: GitHub, Payment,
+// Groq, harga toko, dll) — supaya otomatis sama untuk semua pengunjung. ---
+async function pushSettingsToSupabase() { await kvSet("wm_settings", state.settings); }
+async function pullSettingsFromSupabase() { return await kvGet("wm_settings"); }
+
+// --- Akun user (daftar/masuk/profil) — disimpan sebagai satu array di
+// balik key "wm_users". Fallback ke state.users lokal kalau Supabase belum
+// dikonfigurasi sama sekali. ---
+async function fetchUsersArray() {
+  const remote = await kvGet("wm_users");
+  return Array.isArray(remote) ? remote : null;
+}
 async function usersFindByUsername(username) {
-  const sb = await getSupabase();
-  if (sb) {
-    const table = state.settings.supabase.table || "wm_accounts";
-    const { data, error } = await sb.from(table).select("*").ilike("username", username).limit(1);
-    if (error) { console.warn("supabase select error", error); return null; }
-    return data && data[0] ? data[0] : null;
-  }
-  return state.users.find((u) => u.username.toLowerCase() === username.toLowerCase()) || null;
+  const cfg = sbConfig();
+  const list = cfg.url && cfg.anonKey ? (await fetchUsersArray()) ?? state.users : state.users;
+  return list.find((u) => u.username.toLowerCase() === username.toLowerCase()) || null;
 }
 async function usersVerifyLogin(username, password) {
-  const sb = await getSupabase();
-  if (sb) {
-    const row = await usersFindByUsername(username);
-    if (!row) return null;
+  const cfg = sbConfig();
+  if (cfg.url && cfg.anonKey) {
+    const list = (await fetchUsersArray()) ?? [];
     const hash = await hashPassword(password);
-    return row.password_hash === hash ? { id: row.id, username: row.username, telegramId: row.telegram_id || "", telegramUsername: row.telegram_username || "", createdAt: new Date(row.created_at).getTime() } : null;
+    const row = list.find((u) => u.username.toLowerCase() === username.toLowerCase() && u.passwordHash === hash);
+    return row ? { id: row.id, username: row.username, telegramId: row.telegramId || "", telegramUsername: row.telegramUsername || "", createdAt: row.createdAt } : null;
   }
   const local = state.users.find((u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
   return local || null;
 }
 async function usersCreate(username, password) {
-  const sb = await getSupabase();
-  if (sb) {
-    const table = state.settings.supabase.table || "wm_accounts";
-    if (await usersFindByUsername(username)) throw new Error("Username sudah dipakai, pilih yang lain.");
-    const hash = await hashPassword(password);
-    const { data, error } = await sb.from(table).insert({ username, password_hash: hash }).select().single();
-    if (error) throw new Error(error.message);
-    return { id: data.id, username: data.username, telegramId: data.telegram_id || "", telegramUsername: data.telegram_username || "", createdAt: new Date(data.created_at).getTime() };
+  const cfg = sbConfig();
+  if (cfg.url && cfg.anonKey) {
+    const list = (await fetchUsersArray()) ?? [];
+    if (list.some((u) => u.username.toLowerCase() === username.toLowerCase())) throw new Error("Username sudah dipakai, pilih yang lain.");
+    const user = { id: uid(), username, passwordHash: await hashPassword(password), telegramId: "", telegramUsername: "", createdAt: now() };
+    list.push(user);
+    const ok = await kvSet("wm_users", list);
+    if (!ok) throw new Error("Gagal menyimpan akun ke Supabase.");
+    return { id: user.id, username: user.username, telegramId: "", telegramUsername: "", createdAt: user.createdAt };
   }
   if (state.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) throw new Error("Username sudah dipakai, pilih yang lain.");
   const user = { id: uid(), username, password, telegramId: "", telegramUsername: "", createdAt: now() };
@@ -321,16 +399,17 @@ async function usersCreate(username, password) {
   return user;
 }
 async function usersUpdate(id, patch) {
-  const sb = await getSupabase();
-  if (sb) {
-    const table = state.settings.supabase.table || "wm_accounts";
-    const payload = {};
-    if (patch.username) payload.username = patch.username;
-    if (patch.password) payload.password_hash = await hashPassword(patch.password);
-    if (patch.telegramId !== undefined) payload.telegram_id = patch.telegramId;
-    if (patch.telegramUsername !== undefined) payload.telegram_username = patch.telegramUsername;
-    const { error } = await sb.from(table).update(payload).eq("id", id);
-    if (error) throw new Error(error.message);
+  const cfg = sbConfig();
+  if (cfg.url && cfg.anonKey) {
+    const list = (await fetchUsersArray()) ?? [];
+    const u = list.find((x) => x.id === id);
+    if (!u) throw new Error("Akun tidak ditemukan.");
+    if (patch.username) u.username = patch.username;
+    if (patch.password) u.passwordHash = await hashPassword(patch.password);
+    if (patch.telegramId !== undefined) u.telegramId = patch.telegramId;
+    if (patch.telegramUsername !== undefined) u.telegramUsername = patch.telegramUsername;
+    const ok = await kvSet("wm_users", list);
+    if (!ok) throw new Error("Gagal menyimpan perubahan ke Supabase.");
     return true;
   }
   const u = state.users.find((x) => x.id === id);
@@ -343,11 +422,12 @@ async function usersUpdate(id, patch) {
   return true;
 }
 async function usersDelete(id) {
-  const sb = await getSupabase();
-  if (sb) {
-    const table = state.settings.supabase.table || "wm_accounts";
-    const { error } = await sb.from(table).delete().eq("id", id);
-    if (error) throw new Error(error.message);
+  const cfg = sbConfig();
+  if (cfg.url && cfg.anonKey) {
+    const list = (await fetchUsersArray()) ?? [];
+    const filtered = list.filter((u) => u.id !== id);
+    const ok = await kvSet("wm_users", filtered);
+    if (!ok) throw new Error("Gagal menghapus akun di Supabase.");
     return true;
   }
   state.users = state.users.filter((u) => u.id !== id);
@@ -355,67 +435,102 @@ async function usersDelete(id) {
   return true;
 }
 async function usersListAll() {
-  const sb = await getSupabase();
-  if (sb) {
-    const table = state.settings.supabase.table || "wm_accounts";
-    const { data, error } = await sb.from(table).select("id, username, telegram_id, telegram_username, created_at").order("created_at", { ascending: false });
-    if (error) { console.warn("supabase list error", error); return []; }
-    return (data || []).map((r) => ({ id: r.id, username: r.username, telegramId: r.telegram_id || "", telegramUsername: r.telegram_username || "", createdAt: new Date(r.created_at).getTime() }));
+  const cfg = sbConfig();
+  if (cfg.url && cfg.anonKey) {
+    const list = (await fetchUsersArray()) ?? [];
+    return list.map((u) => ({ id: u.id, username: u.username, telegramId: u.telegramId || "", telegramUsername: u.telegramUsername || "", createdAt: u.createdAt }));
   }
   return state.users;
 }
 
 // ---------------------------------------------------------------------------
 // Verifikasi Telegram — supaya penautan ID/Username tidak bisa dipalsukan.
-// Alurnya: website bikin kode acak & simpan status "pending" di Supabase,
-// lalu orangnya kirim "/verifikasi <kode>" ke bot Telegram (project terpisah,
-// lihat folder bot/). Bot yang mengisi telegram_id & mengubah status jadi
-// "verified". Website tinggal polling status itu.
+// Alurnya: website bikin kode acak & simpan permintaan "pending" di dalam
+// array di balik key "wm_verifications", lalu orangnya kirim
+// "/verifikasi <kode>" ke bot Telegram (project terpisah, lihat folder
+// bot/). Bot yang mengisi telegramId & mengubah status jadi "verified" di
+// array yang sama. Website tinggal polling key itu.
 // ---------------------------------------------------------------------------
 
 async function createVerificationRequest(accountId) {
-  const sb = await getSupabase();
-  if (!sb) throw new Error("Supabase belum dikonfigurasi. Verifikasi Telegram belum bisa dipakai.");
-  const table = state.settings.supabase.verifyTable || "wm_verifications";
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expiresAt = new Date(now() + 10 * 60000).toISOString();
-  const { data, error } = await sb.from(table).insert({ account_id: accountId, code, status: "pending", expires_at: expiresAt }).select().single();
-  if (error) throw new Error(error.message);
-  return { id: data.id, code };
+  const cfg = sbConfig();
+  if (!cfg.url || !cfg.anonKey) throw new Error("Supabase belum dikonfigurasi. Verifikasi Telegram belum bisa dipakai.");
+  const list = (await kvGet("wm_verifications")) || [];
+  const request = { id: uid(), accountId, code: String(Math.floor(100000 + Math.random() * 900000)), status: "pending", createdAt: now(), expiresAt: now() + 10 * 60000 };
+  list.push(request);
+  const ok = await kvSet("wm_verifications", list);
+  if (!ok) throw new Error("Gagal membuat kode verifikasi.");
+  return { id: request.id, code: request.code };
 }
 async function checkVerificationStatus(requestId) {
-  const sb = await getSupabase();
-  if (!sb) return null;
-  const table = state.settings.supabase.verifyTable || "wm_verifications";
-  const { data, error } = await sb.from(table).select("*").eq("id", requestId).maybeSingle();
-  if (error) { console.warn("cek verifikasi gagal", error); return null; }
-  return data || null;
+  const list = (await kvGet("wm_verifications")) || [];
+  return list.find((r) => r.id === requestId) || null;
 }
 
 async function loadKey(key, fallback) {
-  try { const res = await window.storage.get(key, true); return res ? JSON.parse(res.value) : fallback; }
+  try { const raw = localStorage.getItem(key); return raw !== null ? JSON.parse(raw) : fallback; }
   catch { return fallback; }
 }
 async function _rawSaveKey(key, value) {
-  try { await window.storage.set(key, JSON.stringify(value), true); }
+  try { localStorage.setItem(key, JSON.stringify(value)); }
   catch (e) { console.error("storage set failed", key, e); }
 }
-const GITHUB_TRACKED_KEYS = ["wm:owners", "wm:roles", "wm:apikeys", "wm:quotas", "wm:warns", "wm:settings"];
-let _pushTimer = null;
-function schedulePushToGithub() {
+const SHOP_KEYS = ["wm:owners", "wm:roles", "wm:apikeys", "wm:quotas", "wm:warns"];
+function pushShopToKv() {
+  kvSet("wm_shop", { owners: state.owners, roles: state.roles, apikeys: state.apikeys, quotas: state.quotas, warns: state.warns });
+}
+
+// Mengikuti pola script bot Telegram asli: DUA database GitHub terpisah —
+// satu untuk data utama (owner/apikey/kuota/warn/settings), satu lagi
+// KHUSUS untuk Role DB. Auto-push ke masing-masing repo begitu ada
+// perubahan, kalau repo+token-nya sudah diisi (di luar sinkron Supabase
+// yang sudah ada, sebagai lapisan tambahan mengikuti arsitektur bot lama).
+let _mainGhTimer = null, _rolesGhTimer = null;
+function scheduleMainGithubPush() {
   const gh = state.settings.github;
-  if (!gh || !gh.repo || !gh.token) return; // butuh token buat menulis ke repo
-  clearTimeout(_pushTimer);
-  _pushTimer = setTimeout(async () => {
+  if (!gh || !gh.repo || !gh.token) return;
+  clearTimeout(_mainGhTimer);
+  _mainGhTimer = setTimeout(async () => {
     try {
       let sha; try { const existing = await ghGetFile(gh.repo, gh.branch, gh.token, gh.path); if (existing) sha = existing.sha; } catch {}
-      await ghPutFile(gh.repo, gh.branch, gh.token, gh.path, buildDatabaseExport(), sha, "Auto-update dari WorldMarket Panel");
-    } catch (e) { console.warn("Auto-push ke GitHub gagal:", e.message); }
+      await ghPutFile(gh.repo, gh.branch, gh.token, gh.path, buildMainDatabaseExport(), sha, "Auto-update database utama dari WorldMarket Panel");
+    } catch (e) { console.warn("Auto-push ke GitHub (utama) gagal:", e.message); }
   }, 2500);
 }
+function scheduleRolesGithubPush() {
+  const gh = state.settings.githubRoles;
+  if (!gh || !gh.repo || !gh.token) return;
+  clearTimeout(_rolesGhTimer);
+  _rolesGhTimer = setTimeout(async () => {
+    try {
+      let sha; try { const existing = await ghGetFile(gh.repo, gh.branch, gh.token, gh.path); if (existing) sha = existing.sha; } catch {}
+      await ghPutFile(gh.repo, gh.branch, gh.token, gh.path, buildRolesExport(), sha, "Auto-update role database dari WorldMarket Panel");
+    } catch (e) { console.warn("Auto-push ke GitHub (role) gagal:", e.message); }
+  }, 2500);
+}
+const MAIN_DB_KEYS = ["wm:owners", "wm:apikeys", "wm:quotas", "wm:warns", "wm:settings"];
 async function saveKey(key, value) {
   await _rawSaveKey(key, value);
-  if (GITHUB_TRACKED_KEYS.includes(key)) schedulePushToGithub();
+  if (SHOP_KEYS.includes(key)) pushShopToKv();
+  if (key === "wm:settings") pushSettingsToSupabase();
+  if (MAIN_DB_KEYS.includes(key)) scheduleMainGithubPush();
+  if (key === "wm:roles") scheduleRolesGithubPush();
+}
+
+function animateCountUps() {
+  document.querySelectorAll(".stat-value[data-countup]").forEach((el) => {
+    const target = Number(el.dataset.countup) || 0;
+    const duration = 650;
+    const startTime = performance.now();
+    function tick(t) {
+      const progress = Math.min(1, (t - startTime) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * eased).toLocaleString("id-ID");
+      if (progress < 1) requestAnimationFrame(tick);
+      else el.textContent = target.toLocaleString("id-ID");
+    }
+    requestAnimationFrame(tick);
+  });
 }
 
 function notify(msg) {
@@ -445,30 +560,34 @@ async function boot() {
     await saveKey("wm:admin", state.admin);
   }
 
-  // Kalau repo GitHub sudah dikonfigurasi, jadikan GitHub sumber utama untuk
-  // owners/roles/apikeys/quotas/warns/settings (mirip pola bot lama).
-  const gh = state.settings.github;
-  if (gh && gh.repo) {
-    try {
-      const file = await ghGetFile(gh.repo, gh.branch, gh.token, gh.path);
-      if (file) {
-        const parsed = JSON.parse(file.text);
-        if (parsed.owners) state.owners = parsed.owners;
-        if (parsed.roles) state.roles = parsed.roles;
-        if (parsed.apikeys) state.apikeys = parsed.apikeys;
-        if (parsed.quotas) state.quotas = parsed.quotas;
-        if (parsed.warns) state.warns = parsed.warns;
-        if (parsed.settings) {
-          const keepGithub = state.settings.github, keepSupabase = state.settings.supabase;
-          state.settings = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), ...parsed.settings, github: keepGithub, supabase: keepSupabase };
-        }
-        await Promise.all([
-          _rawSaveKey("wm:owners", state.owners), _rawSaveKey("wm:roles", state.roles), _rawSaveKey("wm:apikeys", state.apikeys),
-          _rawSaveKey("wm:quotas", state.quotas), _rawSaveKey("wm:warns", state.warns), _rawSaveKey("wm:settings", state.settings),
-        ]);
-      }
-    } catch (e) { console.warn("Gagal ambil database dari GitHub, pakai cache lokal:", e.message); }
-  }
+  // Tarik Pengaturan dari Supabase dulu (kalau ada) — ini yang membuat
+  // konfigurasi admin (GitHub, Payment, Groq, harga toko, dst) otomatis
+  // sama untuk SEMUA pengunjung, bukan cuma tersimpan di browser admin.
+  try {
+    const remoteSettings = await pullSettingsFromSupabase();
+    if (remoteSettings) {
+      state.settings = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), ...remoteSettings };
+      await _rawSaveKey("wm:settings", state.settings);
+    }
+  } catch (e) { console.warn("Gagal ambil pengaturan dari Supabase, pakai cache lokal:", e.message); }
+
+  // Tarik data toko (owner/role/apikey/kuota/warn) dari Supabase juga —
+  // sama seperti Pengaturan, ini yang bikin SEMUA pengunjung otomatis lihat
+  // data yang sama, bukan cuma cache lokal browser masing-masing.
+  try {
+    const shop = await kvGet("wm_shop");
+    if (shop) {
+      if (shop.owners) state.owners = shop.owners;
+      if (shop.roles) state.roles = shop.roles;
+      if (shop.apikeys) state.apikeys = shop.apikeys;
+      if (shop.quotas) state.quotas = shop.quotas;
+      if (shop.warns) state.warns = shop.warns;
+      await Promise.all([
+        _rawSaveKey("wm:owners", state.owners), _rawSaveKey("wm:roles", state.roles), _rawSaveKey("wm:apikeys", state.apikeys),
+        _rawSaveKey("wm:quotas", state.quotas), _rawSaveKey("wm:warns", state.warns),
+      ]);
+    }
+  } catch (e) { console.warn("Gagal ambil data toko dari Supabase, pakai cache lokal:", e.message); }
 
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "flex";
@@ -783,12 +902,12 @@ function renderTelegramLinkArea(overlay) {
         if (!data) { msgEl.textContent = "Gagal memeriksa status, coba lagi sebentar."; return; }
         if (data.status === "verified") {
           clearInterval(overlay._pollTimer);
-          await usersUpdate(state.currentUser.id, { telegramId: data.telegram_id, telegramUsername: data.telegram_username || "" });
-          state.currentUser.telegramId = data.telegram_id;
-          state.currentUser.telegramUsername = data.telegram_username || "";
+          await usersUpdate(state.currentUser.id, { telegramId: data.telegramId, telegramUsername: data.telegramUsername || "" });
+          state.currentUser.telegramId = data.telegramId;
+          state.currentUser.telegramUsername = data.telegramUsername || "";
           renderTelegramLinkArea(overlay);
           notify("Telegram berhasil ditautkan.");
-        } else if (new Date(data.expires_at).getTime() < now()) {
+        } else if (data.expiresAt < now()) {
           clearInterval(overlay._pollTimer);
           msgEl.textContent = "Kode sudah kedaluwarsa. Klik \"Mulai verifikasi\" lagi untuk kode baru.";
         } else {
@@ -812,7 +931,12 @@ function render() {
     aiworld: viewAiWorldChat, "aiworld-config": viewAiWorldConfig,
     "p-orders": viewMyOrders,
     owners: viewOwners, roles: viewRoles, warns: viewWarns, promo: viewPromo,
-    migration: viewMigration, settings: viewSettings,
+    migration: viewMigration,
+    "settings-general": viewSettingsGeneral,
+    "settings-github": viewSettingsGithub,
+    "settings-payment": viewSettingsPayment,
+    "settings-supabase": viewSettingsSupabase,
+    "settings-accounts": viewSettingsAccounts,
   };
   main.innerHTML = views[state.tab] ? views[state.tab]() : "";
   bindHandlers[state.tab] && bindHandlers[state.tab]();
@@ -841,12 +965,12 @@ function viewPublicDashboard() {
   const totalApikeyUnits = state.apikeys.reduce((sum, k) => sum + Number(k.amount), 0);
   return `
     <div class="view">
-      ${sectionHead(s.general.siteName, "Selamat datang", "Tempat beli apikey, kuota add owner, dan ngobrol sama AI World — semuanya langsung dari website ini.")}
+      <div class="hero-shimmer">${sectionHead(s.general.siteName, "Selamat datang", "Tempat beli apikey, kuota add owner, dan ngobrol sama AI World — semuanya langsung dari website ini.")}</div>
       <div class="stat-row">
-        <div class="stat"><div class="stat-value">${totalApikeyUnits.toLocaleString("id-ID")}</div><div class="stat-label">Unit apikey terjual</div></div>
-        <div class="stat"><div class="stat-value">${activeQuotaCount}</div><div class="stat-label">Kuota addowner aktif</div></div>
-        <div class="stat"><div class="stat-value">${s.apikeyShop.enabled ? "Buka" : "Tutup"}</div><div class="stat-label">Status apikey shop</div></div>
-        <div class="stat"><div class="stat-value">${s.quotaShop.enabled ? "Buka" : "Tutup"}</div><div class="stat-label">Status quota shop</div></div>
+        <div class="stat"><div class="stat-value" data-countup="${totalApikeyUnits}">0</div><div class="stat-label">Unit apikey terjual</div></div>
+        <div class="stat"><div class="stat-value" data-countup="${activeQuotaCount}">0</div><div class="stat-label">Kuota addowner aktif</div></div>
+        <div class="stat"><div class="stat-value">${s.apikeyShop.enabled ? '<span class="live-dot"></span>Buka' : "Tutup"}</div><div class="stat-label">Status apikey shop</div></div>
+        <div class="stat"><div class="stat-value">${s.quotaShop.enabled ? '<span class="live-dot"></span>Buka' : "Tutup"}</div><div class="stat-label">Status quota shop</div></div>
       </div>
       <div class="grid-2">
         <div class="panel"><div class="panel-title">Apikey Shop</div><p class="desc" style="margin-bottom:14px;">Harga mulai ${rupiah(s.apikeyShop.pricePerUnit)} per unit.</p><button class="btn btn-primary" data-goto="apikeys">Beli apikey</button></div>
@@ -857,6 +981,7 @@ function viewPublicDashboard() {
 }
 bindHandlers["p-dashboard"] = () => {
   document.querySelectorAll("[data-goto]").forEach((btn) => btn.addEventListener("click", () => { state.tab = btn.dataset.goto; renderSidebar(); render(); }));
+  animateCountUps();
 };
 
 // ---------------------------------------------------------------------------
@@ -929,11 +1054,11 @@ function viewAdminDashboard() {
     <div class="view">
       ${sectionHead("Admin Console", "Ringkasan penuh sistem", "Halaman ini hanya bisa dilihat setelah login admin.", true)}
       <div class="stat-row mode-admin-stats">
-        <div class="stat"><div class="stat-value">${state.owners.length}</div><div class="stat-label">Nomor di Owner DB</div></div>
-        <div class="stat"><div class="stat-value">${state.roles.length}</div><div class="stat-label">User di Role DB</div></div>
-        <div class="stat"><div class="stat-value">${totalApikeyUnits.toLocaleString("id-ID")}</div><div class="stat-label">Unit apikey terjual</div></div>
-        <div class="stat"><div class="stat-value">${activeQuotaCount}</div><div class="stat-label">Kuota addowner aktif</div></div>
-        <div class="stat"><div class="stat-value">${flaggedWarns}</div><div class="stat-label">User kena batas warn</div></div>
+        <div class="stat"><div class="stat-value" data-countup="${state.owners.length}">0</div><div class="stat-label">Nomor di Owner DB</div></div>
+        <div class="stat"><div class="stat-value" data-countup="${state.roles.length}">0</div><div class="stat-label">User di Role DB</div></div>
+        <div class="stat"><div class="stat-value" data-countup="${totalApikeyUnits}">0</div><div class="stat-label">Unit apikey terjual</div></div>
+        <div class="stat"><div class="stat-value" data-countup="${activeQuotaCount}">0</div><div class="stat-label">Kuota addowner aktif</div></div>
+        <div class="stat"><div class="stat-value" data-countup="${flaggedWarns}">0</div><div class="stat-label">User kena batas warn</div></div>
       </div>
       <div class="grid-2">
         <div class="panel"><div class="panel-title">Status toko</div>
@@ -948,6 +1073,7 @@ function viewAdminDashboard() {
       </div>
     </div>`;
 }
+bindHandlers["a-dashboard"] = () => { animateCountUps(); };
 
 // ---------------------------------------------------------------------------
 // Owner DB (admin only)
@@ -1388,6 +1514,12 @@ async function ghPutFile(repo, branch, token, path, contentText, sha, message) {
 function buildDatabaseExport() {
   return JSON.stringify({ owners: state.owners, roles: state.roles, apikeys: state.apikeys, quotas: state.quotas, warns: state.warns, settings: state.settings, exportedAt: now() }, null, 2);
 }
+function buildMainDatabaseExport() {
+  return JSON.stringify({ owners: state.owners, apikeys: state.apikeys, quotas: state.quotas, warns: state.warns, settings: state.settings, exportedAt: now() }, null, 2);
+}
+function buildRolesExport() {
+  return JSON.stringify({ roles: state.roles, exportedAt: now() }, null, 2);
+}
 
 // ---------------------------------------------------------------------------
 // Payment Gateway (FR3 NEWERA) — website TIDAK PERNAH menyimpan API key FR3.
@@ -1600,11 +1732,11 @@ bindHandlers.migration = () => {
 // Settings (admin only)
 // ---------------------------------------------------------------------------
 
-function viewSettings() {
-  const g = state.settings.general, ak = state.settings.apikeyShop, q = state.settings.quotaShop, wn = state.settings.warnSystem, gh = state.settings.github, sb = state.settings.supabase;
+function viewSettingsGeneral() {
+  const g = state.settings.general, ak = state.settings.apikeyShop, q = state.settings.quotaShop, wn = state.settings.warnSystem;
   return `
     <div class="view">
-      ${sectionHead("Admin · Pengaturan", "Konfigurasi umum situs", "Semua pengaturan inti website ini — nama situs, harga toko, backup ke GitHub, dan akun admin.", true)}
+      ${sectionHead("Admin · Pengaturan Umum", "Identitas situs & harga toko", "Nama situs, notifikasi, sesi admin, dan harga apikey/kuota.", true)}
       <div class="grid-2">
         <div class="panel">
           <div class="panel-title">Pengaturan umum</div>
@@ -1621,106 +1753,59 @@ function viewSettings() {
           <label class="field"><span>Batas maksimum warn</span><input class="input" type="number" id="setMaxWarn" value="${wn.maxWarn}" /></label>
         </div>
       </div>
+    </div>`;
+}
+bindHandlers["settings-general"] = () => {
+  const g = state.settings.general, ak = state.settings.apikeyShop, q = state.settings.quotaShop, wn = state.settings.warnSystem;
+  const persistSettings = () => saveKey("wm:settings", state.settings);
+  document.getElementById("setSiteName").addEventListener("change", (e) => { g.siteName = e.target.value.trim() || "WorldMarket"; persistSettings(); renderSidebar(); });
+  document.getElementById("setWebhook").addEventListener("change", (e) => { g.notifyWebhookUrl = e.target.value.trim(); persistSettings(); });
+  document.getElementById("setSessionTimeout").addEventListener("change", (e) => { g.sessionTimeoutMinutes = Number(e.target.value) || 30; persistSettings(); resetInactivityTimer(); });
+  document.getElementById("setApikeyPrice").addEventListener("change", (e) => { ak.pricePerUnit = Number(e.target.value) || 0; persistSettings(); });
+  document.getElementById("setQuotaTempPrice").addEventListener("change", (e) => { q.priceTemp = Number(e.target.value) || 0; persistSettings(); });
+  document.getElementById("setQuotaPermPrice").addEventListener("change", (e) => { q.pricePermanent = Number(e.target.value) || 0; persistSettings(); });
+  document.getElementById("setQuotaDays").addEventListener("change", (e) => { q.tempDurationDays = Number(e.target.value) || 0; persistSettings(); });
+  document.getElementById("setMaxWarn").addEventListener("change", (e) => { wn.maxWarn = Number(e.target.value) || 1; persistSettings(); });
+};
+
+function viewSettingsGithub() {
+  const gh = state.settings.github;
+  const ghr = state.settings.githubRoles;
+  return `
+    <div class="view">
+      ${sectionHead("Admin · GitHub", "Dua database terpisah, sama seperti script bot", "Mengikuti arsitektur script bot Telegram asli: Owner DB/apikey/kuota/warn/pengaturan disimpan di satu repo, Role DB disimpan di repo terpisah.", true)}
+
       <div class="panel">
-        <div class="panel-title">Backup database ke GitHub</div>
-        <p class="desc" style="margin-bottom:14px;">Simpan salinan seluruh database (owner, role, apikey, kuota, warn, pengaturan) ke repo kamu sendiri. Token disimpan apa adanya di storage panel ini — jangan pakai token yang pernah bocor.</p>
+        <div class="panel-title">Database Utama (Owner DB, Apikey, Kuota, Warn, Pengaturan)</div>
+        <p class="desc" style="margin-bottom:14px;">Otomatis tersimpan ke sini setiap ada perubahan (kalau repo & token sudah diisi). Token disimpan apa adanya di storage panel ini — jangan pakai token yang pernah bocor.</p>
         <div class="grid-2">
           <label class="field"><span>Repo (owner/nama-repo)</span><input class="input" id="ghRepo" value="${esc(gh.repo)}" placeholder="username/worldmarket-data" /></label>
           <label class="field"><span>Branch</span><input class="input" id="ghBranch" value="${esc(gh.branch)}" /></label>
           <label class="field"><span>Personal access token</span><input class="input" type="password" id="ghToken" value="${esc(gh.token)}" placeholder="ghp_…" /></label>
           <label class="field"><span>Path file</span><input class="input" id="ghPath" value="${esc(gh.path)}" /></label>
         </div>
-        <button class="btn btn-secondary" id="ghBackupBtn">Simpan database sekarang ke GitHub</button>
+        <button class="btn btn-secondary" id="ghBackupBtn">Simpan database utama sekarang ke GitHub</button>
         <div id="ghBackupStatus" class="muted" style="font-size:13px; margin-top:10px;"></div>
       </div>
-      <div class="panel">
-        <div class="panel-title">Payment Gateway (FR3 NEWERA)</div>
-        <p class="desc" style="margin-bottom:14px;">Pembayaran apikey & kuota lewat QRIS, terhubung langsung ke <a href="https://fr3newera.com" target="_blank" rel="noopener" style="color:var(--amber);">fr3newera.com</a> dari website ini.</p>
-        <div class="grid-2">
-          <label class="field"><span>API Key FR3 NEWERA</span><input class="input" type="password" id="payApiKey" value="${esc(state.settings.payment?.apiKey || "")}" placeholder="AO_xxxxx…" /></label>
-          <div class="kv" style="border:none; padding-top:22px;"><span>MDR ditanggung customer</span><button class="toggle ${state.settings.payment?.addMdrToCustomer ? "on" : ""}" id="payMdrToggle"><span class="toggle-knob"></span></button></div>
-        </div>
-        <button class="btn btn-secondary" id="payTestBtn">Tes koneksi & cek saldo</button>
-        <div id="payStatus" class="muted" style="font-size:13px; margin-top:10px;"></div>
-        <p class="desc" style="margin-top:10px;">Kalau API key ini kosong atau tidak valid, pengunjung yang klik beli akan melihat layar penuh "Pembayaran Sedang Bermasalah" — bukan pop-up kecil — supaya jelas kalau toko sedang tidak bisa memproses transaksi.</p>
-        <p class="desc" style="margin-top:10px; color:var(--red);">Perlu diketahui: API key ini tersimpan di dalam file website (berjalan di browser pengunjung). Siapa pun yang membuka "View Source"/DevTools di halaman ini berpotensi melihat nilainya. Simpan hanya kalau kamu memang memilih cara ini dengan sadar akan risikonya.</p>
-      </div>
-      <div class="panel">
-        <div class="panel-title">Database akun (Supabase)</div>
-        <p class="desc" style="margin-bottom:14px;">Akun user (daftar/masuk/profil) disimpan di sini kalau diisi. Kalau dikosongkan, akun tetap jalan pakai penyimpanan lokal panel ini sebagai fallback.</p>
-        <div class="grid-2">
-          <label class="field"><span>Project URL</span><input class="input" id="sbUrl" value="${esc(sb.url)}" placeholder="https://xxxx.supabase.co" /></label>
-          <label class="field"><span>Anon public key</span><input class="input" type="password" id="sbKey" value="${esc(sb.anonKey)}" placeholder="eyJhbGciOi…" /></label>
-          <label class="field"><span>Nama tabel akun</span><input class="input" id="sbTable" value="${esc(sb.table)}" /></label>
-          <label class="field"><span>Nama tabel verifikasi</span><input class="input" id="sbVerifyTable" value="${esc(sb.verifyTable)}" /></label>
-        </div>
-        <button class="btn btn-secondary" id="sbTestBtn">Tes koneksi</button>
-        <div id="sbStatus" class="muted" style="font-size:13px; margin-top:10px;"></div>
-        <p class="desc" style="margin-top:14px;">Buat kedua tabel ini sekali lewat SQL Editor di Supabase:</p>
-        <pre class="mono" style="background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:11.5px; overflow-x:auto; white-space:pre;">create table if not exists public.${esc(sb.table || "wm_accounts")} (
-  id uuid primary key default gen_random_uuid(),
-  username text unique not null,
-  password_hash text not null,
-  telegram_id text,
-  telegram_username text,
-  created_at timestamptz not null default now()
-);
-alter table public.${esc(sb.table || "wm_accounts")} add column if not exists telegram_id text;
-alter table public.${esc(sb.table || "wm_accounts")} add column if not exists telegram_username text;
-alter table public.${esc(sb.table || "wm_accounts")} enable row level security;
-create policy "wm allow anon" on public.${esc(sb.table || "wm_accounts")}
-  for all using (true) with check (true);
-
-create table if not exists public.${esc(sb.verifyTable || "wm_verifications")} (
-  id uuid primary key default gen_random_uuid(),
-  account_id uuid not null references public.${esc(sb.table || "wm_accounts")}(id) on delete cascade,
-  code text not null,
-  status text not null default 'pending',
-  telegram_id text,
-  telegram_username text,
-  created_at timestamptz not null default now(),
-  expires_at timestamptz not null,
-  verified_at timestamptz
-);
-alter table public.${esc(sb.verifyTable || "wm_verifications")} enable row level security;
-create policy "wm allow anon" on public.${esc(sb.verifyTable || "wm_verifications")}
-  for all using (true) with check (true);</pre>
-        <p class="desc">Policy di atas sengaja permisif karena panel ini memakai anon key dari sisi browser — cukup untuk demo, bukan untuk data sensitif produksi.</p>
-        <p class="desc" style="margin-top:10px;">Tabel verifikasi ini dipakai bareng dengan <strong>bot Telegram verifikasi</strong> (project terpisah, lihat folder <code>bot/</code> di paket yang kamu unduh). Bot itu yang bertugas mengisi <code>telegram_id</code> dan mengubah status jadi "verified" setelah orangnya kirim <code>/verifikasi &lt;kode&gt;</code> — jadi penautan Telegram ID tidak bisa dipalsukan asal ketik.</p>
-      </div>
 
       <div class="panel">
-        <div class="panel-title">Akun admin</div>
-        <p class="desc" style="margin-bottom:14px;">Username saat ini: <strong>${esc(state.admin.username)}</strong>. Ganti password secara berkala.</p>
+        <div class="panel-title">Database Role (Role DB) — repo terpisah</div>
+        <p class="desc" style="margin-bottom:14px;">Persis seperti script bot asli: Role DB disimpan di repo GitHub-nya sendiri, terpisah dari database utama. Otomatis tersimpan ke sini setiap ada perubahan di Role DB.</p>
         <div class="grid-2">
-          <label class="field"><span>Username baru</span><input class="input" id="admNewUser" placeholder="${esc(state.admin.username)}" /></label>
-          <label class="field"><span>Password baru</span><input class="input" type="password" id="admNewPass" placeholder="••••••••" /></label>
+          <label class="field"><span>Repo (owner/nama-repo)</span><input class="input" id="ghrRepo" value="${esc(ghr.repo)}" placeholder="username/khusus-role" /></label>
+          <label class="field"><span>Branch</span><input class="input" id="ghrBranch" value="${esc(ghr.branch)}" /></label>
+          <label class="field"><span>Personal access token</span><input class="input" type="password" id="ghrToken" value="${esc(ghr.token)}" placeholder="ghp_…" /></label>
+          <label class="field"><span>Path file</span><input class="input" id="ghrPath" value="${esc(ghr.path)}" /></label>
         </div>
-        <div class="field"><span>Password saat ini (konfirmasi)</span><input class="input" type="password" id="admCurrentPass" /></div>
-        <div class="modal-error" id="admError" style="margin:6px 0 0;"></div>
-        <button class="btn btn-secondary" id="admSaveBtn" style="margin-top:10px;">Simpan akun admin</button>
-      </div>
-
-      <div class="panel">
-        <div class="panel-title">Akun user terdaftar</div>
-        <p class="desc" style="margin-bottom:14px;">Semua akun yang dibuat pengunjung lewat "Masuk / Daftar" di halaman publik${sb.url && sb.anonKey ? " (dari Supabase)" : " (dari penyimpanan lokal)"}.</p>
-        <div id="userListArea"><div class="muted" style="font-size:13px;">Memuat daftar user…</div></div>
+        <button class="btn btn-secondary" id="ghrBackupBtn">Simpan Role DB sekarang ke GitHub</button>
+        <div id="ghrBackupStatus" class="muted" style="font-size:13px; margin-top:10px;"></div>
       </div>
     </div>`;
 }
-bindHandlers.settings = () => {
-  const g = state.settings.general, ak = state.settings.apikeyShop, q = state.settings.quotaShop, wn = state.settings.warnSystem, gh = state.settings.github, sb = state.settings.supabase;
+bindHandlers["settings-github"] = () => {
+  const gh = state.settings.github;
+  const ghr = state.settings.githubRoles;
   const persistSettings = () => saveKey("wm:settings", state.settings);
-
-  document.getElementById("setSiteName").addEventListener("change", (e) => { g.siteName = e.target.value.trim() || "WorldMarket"; persistSettings(); renderSidebar(); });
-  document.getElementById("setWebhook").addEventListener("change", (e) => { g.notifyWebhookUrl = e.target.value.trim(); persistSettings(); });
-  document.getElementById("setSessionTimeout").addEventListener("change", (e) => { g.sessionTimeoutMinutes = Number(e.target.value) || 30; persistSettings(); resetInactivityTimer(); });
-
-  document.getElementById("setApikeyPrice").addEventListener("change", (e) => { ak.pricePerUnit = Number(e.target.value) || 0; persistSettings(); });
-  document.getElementById("setQuotaTempPrice").addEventListener("change", (e) => { q.priceTemp = Number(e.target.value) || 0; persistSettings(); });
-  document.getElementById("setQuotaPermPrice").addEventListener("change", (e) => { q.pricePermanent = Number(e.target.value) || 0; persistSettings(); });
-  document.getElementById("setQuotaDays").addEventListener("change", (e) => { q.tempDurationDays = Number(e.target.value) || 0; persistSettings(); });
-  document.getElementById("setMaxWarn").addEventListener("change", (e) => { wn.maxWarn = Number(e.target.value) || 1; persistSettings(); });
 
   document.getElementById("ghRepo").addEventListener("change", (e) => { gh.repo = e.target.value.trim(); persistSettings(); });
   document.getElementById("ghBranch").addEventListener("change", (e) => { gh.branch = e.target.value.trim() || "main"; persistSettings(); });
@@ -1732,18 +1817,49 @@ bindHandlers.settings = () => {
     statusEl.textContent = "Menyimpan…"; statusEl.className = "muted";
     try {
       let sha; try { const existing = await ghGetFile(gh.repo, gh.branch, gh.token, gh.path); if (existing) sha = existing.sha; } catch {}
-      await ghPutFile(gh.repo, gh.branch, gh.token, gh.path, buildDatabaseExport(), sha, "Backup database dari WorldMarket Panel");
+      await ghPutFile(gh.repo, gh.branch, gh.token, gh.path, buildMainDatabaseExport(), sha, "Backup database utama dari WorldMarket Panel");
       statusEl.textContent = `Berhasil disimpan ke ${gh.repo}/${gh.path}.`; statusEl.className = "ok-text";
     } catch (e) { statusEl.textContent = "Gagal backup: " + e.message; statusEl.className = "danger-text"; }
   });
 
-  document.getElementById("payApiKey").addEventListener("change", (e) => {
-    if (!state.settings.payment) state.settings.payment = { apiKey: "", addMdrToCustomer: false };
-    state.settings.payment.apiKey = e.target.value.trim();
-    persistSettings();
+  document.getElementById("ghrRepo").addEventListener("change", (e) => { ghr.repo = e.target.value.trim(); persistSettings(); });
+  document.getElementById("ghrBranch").addEventListener("change", (e) => { ghr.branch = e.target.value.trim() || "main"; persistSettings(); });
+  document.getElementById("ghrToken").addEventListener("change", (e) => { ghr.token = e.target.value.trim(); persistSettings(); });
+  document.getElementById("ghrPath").addEventListener("change", (e) => { ghr.path = e.target.value.trim() || "database/additional/role_db.json"; persistSettings(); });
+  document.getElementById("ghrBackupBtn").addEventListener("click", async () => {
+    const statusEl = document.getElementById("ghrBackupStatus");
+    if (!ghr.repo || !ghr.token) { statusEl.textContent = "Isi repo dan token dulu."; statusEl.className = "danger-text"; return; }
+    statusEl.textContent = "Menyimpan…"; statusEl.className = "muted";
+    try {
+      let sha; try { const existing = await ghGetFile(ghr.repo, ghr.branch, ghr.token, ghr.path); if (existing) sha = existing.sha; } catch {}
+      await ghPutFile(ghr.repo, ghr.branch, ghr.token, ghr.path, buildRolesExport(), sha, "Backup Role DB dari WorldMarket Panel");
+      statusEl.textContent = `Berhasil disimpan ke ${ghr.repo}/${ghr.path}.`; statusEl.className = "ok-text";
+    } catch (e) { statusEl.textContent = "Gagal backup: " + e.message; statusEl.className = "danger-text"; }
   });
+};
+
+function viewSettingsPayment() {
+  const p = state.settings.payment || { apiKey: "", addMdrToCustomer: false };
+  return `
+    <div class="view">
+      ${sectionHead("Admin · Payment Gateway", "FR3 NEWERA (QRIS)", "Pembayaran apikey & kuota lewat QRIS, terhubung langsung ke fr3newera.com dari website ini.", true)}
+      <div class="panel">
+        <div class="grid-2">
+          <label class="field"><span>API Key FR3 NEWERA</span><input class="input" type="password" id="payApiKey" value="${esc(p.apiKey || "")}" placeholder="AO_xxxxx…" /></label>
+          <div class="kv" style="border:none; padding-top:22px;"><span>MDR ditanggung customer</span><button class="toggle ${p.addMdrToCustomer ? "on" : ""}" id="payMdrToggle"><span class="toggle-knob"></span></button></div>
+        </div>
+        <button class="btn btn-secondary" id="payTestBtn">Tes koneksi & cek saldo</button>
+        <div id="payStatus" class="muted" style="font-size:13px; margin-top:10px;"></div>
+        <p class="desc" style="margin-top:10px;">Kalau API key ini kosong atau tidak valid, pengunjung yang klik beli akan melihat layar penuh "Pembayaran Sedang Bermasalah" — bukan pop-up kecil — supaya jelas kalau toko sedang tidak bisa memproses transaksi.</p>
+        <p class="desc" style="margin-top:10px; color:var(--red);">Perlu diketahui: API key ini tersimpan di dalam file website (berjalan di browser pengunjung). Siapa pun yang membuka "View Source"/DevTools di halaman ini berpotensi melihat nilainya. Simpan hanya kalau kamu memang memilih cara ini dengan sadar akan risikonya.</p>
+      </div>
+    </div>`;
+}
+bindHandlers["settings-payment"] = () => {
+  if (!state.settings.payment) state.settings.payment = { apiKey: "", addMdrToCustomer: false };
+  const persistSettings = () => saveKey("wm:settings", state.settings);
+  document.getElementById("payApiKey").addEventListener("change", (e) => { state.settings.payment.apiKey = e.target.value.trim(); persistSettings(); });
   document.getElementById("payMdrToggle").addEventListener("click", (e) => {
-    if (!state.settings.payment) state.settings.payment = { apiKey: "", addMdrToCustomer: false };
     state.settings.payment.addMdrToCustomer = !state.settings.payment.addMdrToCustomer;
     e.currentTarget.classList.toggle("on", state.settings.payment.addMdrToCustomer);
     persistSettings();
@@ -1760,7 +1876,97 @@ bindHandlers.settings = () => {
       statusEl.textContent = `Berhasil terhubung. Saldo FR3 NEWERA saat ini: ${rupiah(data.data.saldo)}.`; statusEl.className = "ok-text";
     } catch (e) { statusEl.textContent = "Gagal terhubung: " + e.message; statusEl.className = "danger-text"; }
   });
+};
 
+function viewSettingsSupabase() {
+  const sb = state.settings.supabase;
+  const bootstrapFilled = BOOTSTRAP_SUPABASE.url && BOOTSTRAP_SUPABASE.anonKey;
+  return `
+    <div class="view">
+      ${sectionHead("Admin · Database Akun", "Supabase", "Satu tabel generik (kv_store) menyimpan Pengaturan situs, akun user, dan verifikasi Telegram — semuanya otomatis sama untuk semua pengunjung, bukan cuma tersimpan di browser kamu.", true)}
+
+      <div class="panel">
+        <div class="panel-title">Status sinkronisasi ke semua pengunjung</div>
+        ${bootstrapFilled
+          ? `<div class="kv"><span>Bootstrap di source code</span><span class="pill pill-on">sudah diisi</span></div><p class="desc">Pengaturan yang kamu simpan di halaman admin akan otomatis tersedia untuk semua pengunjung sejak mereka pertama buka website ini.</p>`
+          : `<div class="kv"><span>Bootstrap di source code</span><span class="pill pill-danger">belum diisi</span></div><p class="desc">Tanpa ini, pengaturan yang kamu isi di sini <strong>hanya tersimpan di browser kamu sendiri</strong> — pengunjung lain tidak akan otomatis dapat konfigurasi yang sama. Cari <code>BOOTSTRAP_SUPABASE</code> di bagian atas <code>&lt;script&gt;</code> pada file <code>worldmarket-panel.html</code>, isi <code>url</code> dan <code>anonKey</code> dengan nilai di bawah ini, lalu upload ulang file itu ke hosting kamu — cukup sekali saja.</p>`}
+      </div>
+
+      <div class="panel">
+        <div class="grid-2">
+          <label class="field"><span>Project URL</span><input class="input" id="sbUrl" value="${esc(sb.url)}" placeholder="https://xxxx.supabase.co" /></label>
+          <label class="field"><span>Anon public key</span><input class="input" type="password" id="sbKey" value="${esc(sb.anonKey)}" placeholder="eyJhbGciOi…" /></label>
+          <label class="field"><span>Nama tabel</span><input class="input" id="sbTable" value="${esc(sb.table)}" /></label>
+        </div>
+        <button class="btn btn-secondary" id="sbTestBtn">Tes koneksi</button>
+        <div id="sbStatus" class="muted" style="font-size:13px; margin-top:10px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">SQL setup</div>
+        <p class="desc" style="margin-bottom:14px;">Cukup satu tabel generik untuk semuanya — jalankan sekali lewat SQL Editor di Supabase:</p>
+        <pre class="mono" style="background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:11.5px; overflow-x:auto; white-space:pre;">create table if not exists public.${esc(sb.table || "kv_store")} (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.${esc(sb.table || "kv_store")} enable row level security;
+create policy "wm allow anon" on public.${esc(sb.table || "kv_store")}
+  for all using (true) with check (true);</pre>
+        <p class="desc">Policy di atas sengaja permisif (bisa dibaca & ditulis siapa saja yang tahu anon key) karena panel ini memakai anon key dari sisi browser, bukan autentikasi server sungguhan. Ini trade-off yang disengaja supaya semua pengunjung bisa otomatis mendapat pengaturan terbaru tanpa server tambahan — konsekuensinya, siapa pun yang cukup teliti membuka DevTools bisa melihat (dan secara teknis mengubah) isi tabel ini, termasuk token GitHub, API key payment, dan API key AI yang kamu simpan di Pengaturan. Gunakan token/API key dengan scope seminimal mungkin, dan rotasi berkala.</p>
+        <p class="desc" style="margin-top:10px;">Tabel yang sama dipakai bareng <strong>bot Telegram verifikasi</strong> (folder <code>bot/</code>) lewat key <code>wm_verifications</code> dan <code>wm_bot_groups</code> di dalamnya.</p>
+      </div>
+    </div>`;
+}
+bindHandlers["settings-supabase"] = () => {
+  const sb = state.settings.supabase;
+  const persistSettings = () => saveKey("wm:settings", state.settings);
+  document.getElementById("sbUrl").addEventListener("change", (e) => { sb.url = e.target.value.trim(); persistSettings(); });
+  document.getElementById("sbKey").addEventListener("change", (e) => { sb.anonKey = e.target.value.trim(); persistSettings(); });
+  document.getElementById("sbTable").addEventListener("change", (e) => { sb.table = e.target.value.trim() || "kv_store"; persistSettings(); render(); });
+  document.getElementById("sbTestBtn").addEventListener("click", async () => {
+    const statusEl = document.getElementById("sbStatus");
+    if (!sb.url || !sb.anonKey) { statusEl.textContent = "Isi Project URL dan Anon key dulu."; statusEl.className = "danger-text"; return; }
+    statusEl.textContent = "Menguji koneksi…"; statusEl.className = "muted";
+    try {
+      const cfgUrl = sb.url, cfgKey = sb.anonKey;
+      const res = await fetch(`${cfgUrl}/rest/v1/${sb.table || "kv_store"}?select=key&limit=1`, {
+        headers: { apikey: cfgKey, Authorization: `Bearer ${cfgKey}` },
+      });
+      if (!res.ok) {
+        const map = { 401: "Anon key tidak valid.", 403: "Row Level Security menolak akses. Cek policy tabel.", 404: "Tabel tidak ditemukan. Jalankan SQL setup dulu." };
+        throw new Error(map[res.status] || `Gagal terhubung (HTTP ${res.status}).`);
+      }
+      await pushSettingsToSupabase();
+      statusEl.textContent = "Berhasil terhubung & pengaturan disinkronkan ke Supabase."; statusEl.className = "ok-text";
+    } catch (e) { statusEl.textContent = "Gagal terhubung: " + e.message; statusEl.className = "danger-text"; }
+  });
+};
+
+function viewSettingsAccounts() {
+  const sb = state.settings.supabase;
+  return `
+    <div class="view">
+      ${sectionHead("Admin · Akun Admin & User", "Kelola akses masuk", "Ganti kredensial admin, dan lihat/hapus akun user yang mendaftar dari halaman publik.", true)}
+      <div class="panel">
+        <div class="panel-title">Akun admin</div>
+        <p class="desc" style="margin-bottom:14px;">Username saat ini: <strong>${esc(state.admin.username)}</strong>. Ganti password secara berkala.</p>
+        <div class="grid-2">
+          <label class="field"><span>Username baru</span><input class="input" id="admNewUser" placeholder="${esc(state.admin.username)}" /></label>
+          <label class="field"><span>Password baru</span><input class="input" type="password" id="admNewPass" placeholder="••••••••" /></label>
+        </div>
+        <div class="field"><span>Password saat ini (konfirmasi)</span><input class="input" type="password" id="admCurrentPass" /></div>
+        <div class="modal-error" id="admError" style="margin:6px 0 0;"></div>
+        <button class="btn btn-secondary" id="admSaveBtn" style="margin-top:10px;">Simpan akun admin</button>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Akun user terdaftar</div>
+        <p class="desc" style="margin-bottom:14px;">Semua akun yang dibuat pengunjung lewat "Masuk / Daftar" di halaman publik${sb.url && sb.anonKey ? " (dari Supabase)" : " (dari penyimpanan lokal)"}.</p>
+        <div id="userListArea"><div class="muted" style="font-size:13px;">Memuat daftar user…</div></div>
+      </div>
+    </div>`;
+}
+bindHandlers["settings-accounts"] = () => {
   document.getElementById("admSaveBtn").addEventListener("click", () => {
     const newUser = document.getElementById("admNewUser").value.trim();
     const newPass = document.getElementById("admNewPass").value;
@@ -1773,23 +1979,6 @@ bindHandlers.settings = () => {
     saveKey("wm:admin", state.admin);
     errEl.textContent = ""; notify("Akun admin diperbarui.");
     renderAdminCorner(); render();
-  });
-
-  document.getElementById("sbUrl").addEventListener("change", (e) => { sb.url = e.target.value.trim(); persistSettings(); });
-  document.getElementById("sbKey").addEventListener("change", (e) => { sb.anonKey = e.target.value.trim(); persistSettings(); });
-  document.getElementById("sbTable").addEventListener("change", (e) => { sb.table = e.target.value.trim() || "wm_accounts"; persistSettings(); render(); });
-  document.getElementById("sbVerifyTable").addEventListener("change", (e) => { sb.verifyTable = e.target.value.trim() || "wm_verifications"; persistSettings(); render(); });
-  document.getElementById("sbTestBtn").addEventListener("click", async () => {
-    const statusEl = document.getElementById("sbStatus");
-    if (!sb.url || !sb.anonKey) { statusEl.textContent = "Isi Project URL dan Anon key dulu."; statusEl.className = "danger-text"; return; }
-    statusEl.textContent = "Menguji koneksi…"; statusEl.className = "muted";
-    try {
-      const client = await getSupabase();
-      if (!client) throw new Error("Library Supabase belum siap, coba reload halaman.");
-      const { error, count } = await client.from(sb.table || "wm_accounts").select("*", { count: "exact", head: true });
-      if (error) throw new Error(error.message);
-      statusEl.textContent = `Berhasil terhubung. Jumlah akun saat ini: ${count ?? 0}.`; statusEl.className = "ok-text";
-    } catch (e) { statusEl.textContent = "Gagal terhubung: " + e.message; statusEl.className = "danger-text"; }
   });
 
   async function loadAndRenderUserList() {
