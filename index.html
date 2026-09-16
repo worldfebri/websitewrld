@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>World MD Store</title>
+<title>WorldMarket Store</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -370,6 +370,42 @@ body.auth-lock #userAuthOverlay {
     linear-gradient(135deg,#f8fbff,#eef4ff);
 }
 
+/* ===== Verifikasi Sesi Login Sebelumnya (auto-login dari device yang sama) ===== */
+.session-verify-overlay {
+  position:fixed; inset:0; z-index:400;
+  display:flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255,176,32,0.14), transparent 45%),
+    radial-gradient(circle at 80% 85%, rgba(52,216,198,0.12), transparent 45%),
+    var(--bg);
+  animation: fadeInUp 0.35s ease both;
+}
+.session-verify-box { text-align:center; max-width:440px; padding:0 24px; }
+.session-verify-spinner {
+  width:52px; height:52px; margin:0 auto 22px; border-radius:50%;
+  border:3px solid rgba(255,176,32,0.18); border-top-color:var(--amber);
+  animation:sessionSpin 0.9s linear infinite;
+}
+@keyframes sessionSpin { to { transform:rotate(360deg); } }
+.session-verify-title {
+  font-family:'Sora', sans-serif; font-weight:700; font-size:20px; letter-spacing:0.6px;
+  color:var(--amber); margin-bottom:10px; line-height:1.35;
+  text-shadow:0 0 18px rgba(255,176,32,0.35);
+  animation:sessionVerifyPulse 1.6s ease-in-out infinite;
+}
+@keyframes sessionVerifyPulse { 0%,100% { opacity:1; } 50% { opacity:0.65; } }
+.session-verify-sub { color:var(--muted); font-size:13px; line-height:1.6; }
+
+/* ===== Loading video setelah login / verifikasi sesi berhasil ===== */
+.login-video-overlay {
+  position:fixed; inset:0; z-index:410;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:#000;
+  animation: fadeInUp 0.3s ease both;
+}
+.login-video-el { max-width:100%; max-height:78vh; border-radius:10px; box-shadow:0 0 40px rgba(255,176,32,0.15); }
+.login-video-caption { margin-top:16px; color:var(--muted); font-size:12.5px; letter-spacing:0.3px; }
+
 </style>
 </head>
 <body>
@@ -460,6 +496,7 @@ const DEFAULT_SETTINGS = {
   githubRoles: { repo: "", branch: "main", token: "", path: "database/additional/role_db.json" },
   supabase: { url: "", anonKey: "", table: "kv_worldmd" },
   payment: { qrisImage: "", ownerTelegramId: "" },
+  sessionLogin: { enabled: true, videoUrl: "", durationMs: 2500 },
 };
 
 const NAV_PUBLIC = [
@@ -782,6 +819,65 @@ function notify(msg) {
   notify._t = setTimeout(() => el.classList.remove("show"), 3200);
 }
 
+// ---------------------------------------------------------------------------
+// Sesi login per-device (auto-login) — HANYA disimpan lokal di browser
+// (tidak pernah disinkronkan ke Supabase/GitHub), supaya kalau device yang
+// sama membuka situs lagi, tidak perlu login ulang manual. Identitas akun
+// tetap diverifikasi ulang ke sumber data (Supabase kalau ada, fallback
+// cache lokal) lewat usersListAll() sebelum dianggap sah — device session
+// ini cuma "petunjuk" akun mana yang harus dicoba, bukan otorisasi itu sendiri.
+// ---------------------------------------------------------------------------
+const DEVICE_SESSION_KEY = "wm:deviceSession";
+async function saveDeviceSession(user) {
+  if (!user || !user.id) return;
+  await _rawSaveKey(DEVICE_SESSION_KEY, { id: user.id, username: user.username, savedAt: now() });
+}
+async function clearDeviceSession() {
+  try { localStorage.removeItem(DEVICE_SESSION_KEY); } catch {}
+}
+async function loadDeviceSession() {
+  return await loadKey(DEVICE_SESSION_KEY, null);
+}
+
+function showSessionVerifyOverlay(username) {
+  const el = document.createElement("div");
+  el.id = "sessionVerifyOverlay";
+  el.className = "session-verify-overlay";
+  el.innerHTML = `
+    <div class="session-verify-box">
+      <div class="session-verify-spinner"></div>
+      <div class="session-verify-title">VERIFIKASI SESI LOGIN SEBELUMNYA</div>
+      <div class="session-verify-sub">Ditemukan sesi login sebelumnya untuk <strong>${esc(username)}</strong> di device ini. Sedang memverifikasi ke server, mohon tunggu sebentar…</div>
+    </div>`;
+  document.body.appendChild(el);
+  return el;
+}
+function hideSessionVerifyOverlay() {
+  const el = document.getElementById("sessionVerifyOverlay");
+  if (el) el.remove();
+}
+
+// Layar loading berisi video (mp4) yang muncul setelah login/verifikasi sesi
+// berhasil, sebelum masuk ke dashboard. Video & durasinya diatur admin lewat
+// menu "Sesi & Video Loading" di panel admin (state.settings.sessionLogin).
+function playLoginLoadingVideo() {
+  return new Promise((resolve) => {
+    const sl = state.settings.sessionLogin || {};
+    if (!sl.enabled || !sl.videoUrl) { resolve(); return; }
+    const durationMs = Number(sl.durationMs) > 0 ? Number(sl.durationMs) : 2500;
+    const el = document.createElement("div");
+    el.id = "loginLoadingVideoOverlay";
+    el.className = "login-video-overlay";
+    el.innerHTML = `
+      <video class="login-video-el" autoplay muted playsinline loop>
+        <source src="${esc(sl.videoUrl)}" type="video/mp4" />
+      </video>
+      <div class="login-video-caption">Menyiapkan panel kamu…</div>`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.remove(); resolve(); }, durationMs);
+  });
+}
+
 async function boot() {
   // Sembunyikan seluruh tampilan store sampai user melewati login/register
   if (APP_MODE === "store") {
@@ -867,7 +963,33 @@ async function boot() {
     renderAll();
     openLoginModal();
   } else if (state.currentView === "public" && !state.currentUser) {
-    openUserAuthModal("login");
+    const saved = await loadDeviceSession();
+    let matchedUser = null;
+    if (saved && saved.id) {
+      try {
+        const allUsers = await usersListAll();
+        matchedUser = allUsers.find((u) => u.id === saved.id) || null;
+      } catch (e) { console.warn("Gagal verifikasi sesi sebelumnya:", e.message); }
+    }
+    if (matchedUser) {
+      showSessionVerifyOverlay(matchedUser.username);
+      setTimeout(async () => {
+        hideSessionVerifyOverlay();
+        state.currentUser = {
+          id: matchedUser.id, username: matchedUser.username,
+          telegramId: matchedUser.telegramId || "", telegramUsername: matchedUser.telegramUsername || "",
+        };
+        await saveDeviceSession(state.currentUser);
+        await playLoginLoadingVideo();
+        document.body.classList.remove("auth-lock");
+        renderAdminCorner();
+        render();
+        notify(`Sesi login sebelumnya berhasil diverifikasi. Selamat datang kembali, ${matchedUser.username}.`);
+      }, 2000);
+    } else {
+      if (saved) await clearDeviceSession();
+      openUserAuthModal("login");
+    }
   }
 }
 
@@ -1028,8 +1150,10 @@ function bindUserLoginForm(overlay) {
     const user = await usersVerifyLogin(u, p);
     if (user) {
       state.currentUser = user;
-      document.body.classList.remove("auth-lock");
+      await saveDeviceSession(user);
       close();
+      await playLoginLoadingVideo();
+      document.body.classList.remove("auth-lock");
       renderAdminCorner();
       render();
       notify(`Selamat datang kembali, ${user.username}.`);
@@ -1066,8 +1190,10 @@ function bindUserRegisterForm(overlay) {
     try {
       const user = await usersCreate(u, p);
       state.currentUser = user;
-      document.body.classList.remove("auth-lock");
+      await saveDeviceSession(user);
       close();
+      await playLoginLoadingVideo();
+      document.body.classList.remove("auth-lock");
       renderAdminCorner();
       render();
       notify("Akun berhasil dibuat, langsung masuk.");
@@ -1104,9 +1230,13 @@ function openUserProfileModal() {
   overlay.addEventListener("click", (e) => { if (e.target === overlay) { clearInterval(overlay._pollTimer); overlay.remove(); } });
   const close = () => { clearInterval(overlay._pollTimer); overlay.remove(); };
   overlay.querySelector("#profCancel").addEventListener("click", close);
-  overlay.querySelector("#profLogoutBtn").addEventListener("click", () => {
-    close(); state.currentUser = null; render(); renderAdminCorner();
+  overlay.querySelector("#profLogoutBtn").addEventListener("click", async () => {
+    close(); state.currentUser = null;
+    await clearDeviceSession();
+    document.body.classList.add("auth-lock");
+    render(); renderAdminCorner();
     notify("Berhasil keluar dari akun.");
+    openUserAuthModal("login");
   });
   overlay.querySelector("#profSaveBtn").addEventListener("click", async () => {
     const newUser = overlay.querySelector("#profNewUser").value.trim();
