@@ -405,6 +405,13 @@ body.auth-lock #userAuthOverlay {
 }
 .login-video-el { max-width:100%; max-height:78vh; border-radius:10px; box-shadow:0 0 40px rgba(255,176,32,0.15); }
 .login-video-caption { margin-top:16px; color:var(--muted); font-size:12.5px; letter-spacing:0.3px; }
+.login-video-unmute {
+  margin-top:14px; display:inline-flex; align-items:center; gap:6px;
+  background:rgba(255,176,32,0.14); border:1px solid rgba(255,176,32,0.4); color:var(--amber);
+  font-family:'Inter', sans-serif; font-size:13px; font-weight:600; padding:8px 16px; border-radius:999px;
+  cursor:pointer; animation:sessionVerifyPulse 1.6s ease-in-out infinite;
+}
+.login-video-unmute:hover { background:rgba(255,176,32,0.22); }
 
 </style>
 </head>
@@ -869,11 +876,34 @@ function playLoginLoadingVideo() {
     el.id = "loginLoadingVideoOverlay";
     el.className = "login-video-overlay";
     el.innerHTML = `
-      <video class="login-video-el" autoplay muted playsinline loop>
+      <video class="login-video-el" id="loginLoadingVideoEl" playsinline loop>
         <source src="${esc(sl.videoUrl)}" type="video/mp4" />
       </video>
-      <div class="login-video-caption">Menyiapkan panel kamu…</div>`;
+      <div class="login-video-caption">Menyiapkan panel kamu…</div>
+      <button class="login-video-unmute" id="loginLoadingUnmuteBtn" type="button" style="display:none;">🔊 Ketuk untuk suara</button>`;
     document.body.appendChild(el);
+
+    const videoEl = el.querySelector("#loginLoadingVideoEl");
+    const unmuteBtn = el.querySelector("#loginLoadingUnmuteBtn");
+    // Coba mainkan DENGAN suara dulu. Browser sering memblokir autoplay bersuara
+    // kalau tidak dipicu langsung dari klik user (misalnya pas auto-login sesi
+    // sebelumnya) — kalau diblokir, fallback ke mode senyap + tombol "Ketuk untuk suara".
+    videoEl.muted = false;
+    videoEl.volume = 1;
+    const playPromise = videoEl.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        videoEl.muted = true;
+        videoEl.play().catch(() => {});
+        unmuteBtn.style.display = "inline-flex";
+      });
+    }
+    unmuteBtn.addEventListener("click", () => {
+      videoEl.muted = false;
+      videoEl.play().catch(() => {});
+      unmuteBtn.style.display = "none";
+    });
+
     setTimeout(() => { el.remove(); resolve(); }, durationMs);
   });
 }
