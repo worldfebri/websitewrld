@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>World MD Website</title>
+<title>World MD Store</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -178,6 +178,198 @@ table.table tr:last-child td { border-bottom: none; }
   #app { flex-direction: column; }
   .admin-corner { top: auto; bottom: 24px; right: 16px; }
 }
+
+/* ===== Android Mobile App Style Redesign ===== */
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --panel-2: #eef3ff;
+  --border: #dfe6f2;
+  --amber: #2563eb;
+  --teal: #06b6d4;
+  --violet: #7c3aed;
+  --red: #ef4444;
+  --text: #111827;
+  --muted: #6b7280;
+}
+
+html, body {
+  background:
+    radial-gradient(circle at top right, rgba(37,99,235,.12), transparent 35%),
+    linear-gradient(135deg,#f8fbff,#eef4ff);
+}
+
+.sidebar {
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(18px);
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 8px 0 30px rgba(15,23,42,.06);
+}
+
+.panel, .stat-row, .chat-box {
+  background: rgba(255,255,255,.9);
+  backdrop-filter: blur(12px);
+  border-radius: 22px;
+  border-color: #e5e7eb;
+  box-shadow: 0 12px 35px rgba(15,23,42,.08);
+}
+
+.panel:hover {
+  transform: translateY(-5px);
+  border-color: rgba(37,99,235,.4);
+}
+
+.brand-mark {
+  border-radius: 14px;
+  background: linear-gradient(135deg,#2563eb,#06b6d4);
+  color:white;
+}
+
+.btn, .nav-item, .input {
+  border-radius: 14px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg,#2563eb,#06b6d4);
+  color:white;
+  box-shadow:0 8px 20px rgba(37,99,235,.25);
+}
+
+.btn-primary:hover {
+  transform:translateY(-3px);
+}
+
+.input {
+  background:#f8fafc;
+}
+
+/* Android bottom navigation */
+@media (max-width: 860px) {
+
+  #app {
+    padding-bottom:85px;
+  }
+
+  .sidebar {
+    position:fixed;
+    left:0;
+    bottom:0;
+    top:auto;
+    width:100%;
+    height:72px;
+    z-index:100;
+    padding:8px 12px;
+    border-right:none;
+    border-top:1px solid #e5e7eb;
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+  }
+
+  .sidebar .brand,
+  .sidebar-foot {
+    display:none;
+  }
+
+  .nav {
+    display:flex;
+    flex-direction:row;
+    width:100%;
+    justify-content:space-around;
+    gap:5px;
+  }
+
+  .nav-item {
+    flex:1;
+    height:58px;
+    padding:8px 4px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:4px;
+    font-size:10px;
+  }
+
+  .nav-icon {
+    font-size:20px;
+  }
+
+  .nav-item.active {
+    background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(6,182,212,.15));
+    color:#2563eb;
+  }
+
+  .mobile-bar {
+    display:flex;
+    position:sticky;
+    top:0;
+    z-index:90;
+    background:rgba(255,255,255,.85);
+    backdrop-filter:blur(15px);
+  }
+
+  .main {
+    padding:18px 14px 100px;
+  }
+
+  .title {
+    font-size:22px;
+  }
+}
+
+/* Desktop tetap modern */
+@media (min-width:861px) {
+  .main {
+    padding:40px 50px;
+  }
+
+  .sidebar {
+    border-radius:0 25px 25px 0;
+  }
+}
+
+/* Smooth animation */
+.panel, .btn, .nav-item {
+  transition:.25s ease;
+}
+
+.view {
+  animation: androidFade .45s ease;
+}
+
+@keyframes androidFade {
+  from {
+    opacity:0;
+    transform:translateY(20px) scale(.98);
+  }
+  to {
+    opacity:1;
+    transform:none;
+  }
+}
+
+
+/* ===== Login First Screen ===== */
+body.auth-lock #app,
+body.auth-lock #adminCorner {
+  visibility: hidden;
+}
+
+body.auth-lock #loginOverlay,
+body.auth-lock #userAuthOverlay {
+  display:flex !important;
+}
+
+.auth-splash {
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:
+    radial-gradient(circle at top right, rgba(37,99,235,.25), transparent 40%),
+    linear-gradient(135deg,#f8fbff,#eef4ff);
+}
+
 </style>
 </head>
 <body>
@@ -591,6 +783,10 @@ function notify(msg) {
 }
 
 async function boot() {
+  // Sembunyikan seluruh tampilan store sampai user melewati login/register
+  if (APP_MODE === "store") {
+    document.body.classList.add("auth-lock");
+  }
   const [o, r, k, q, w, mo, s, a, u] = await Promise.all([
     loadKey("wm:owners", []), loadKey("wm:roles", []), loadKey("wm:apikeys", []),
     loadKey("wm:quotas", []), loadKey("wm:warns", []), loadKey("wm:manualOrders", []),
@@ -831,7 +1027,11 @@ function bindUserLoginForm(overlay) {
     if (!u || !p) { overlay.querySelector("#uLoginError").textContent = "Isi username dan password."; return; }
     const user = await usersVerifyLogin(u, p);
     if (user) {
-      state.currentUser = user; close(); renderAdminCorner(); render();
+      state.currentUser = user;
+      document.body.classList.remove("auth-lock");
+      close();
+      renderAdminCorner();
+      render();
       notify(`Selamat datang kembali, ${user.username}.`);
     } else { overlay.querySelector("#uLoginError").textContent = "Username atau password salah."; }
   };
@@ -866,7 +1066,10 @@ function bindUserRegisterForm(overlay) {
     try {
       const user = await usersCreate(u, p);
       state.currentUser = user;
-      close(); renderAdminCorner(); render();
+      document.body.classList.remove("auth-lock");
+      close();
+      renderAdminCorner();
+      render();
       notify("Akun berhasil dibuat, langsung masuk.");
     } catch (e) { errEl.textContent = e.message; }
   };
@@ -1359,6 +1562,23 @@ function viewApikeysPublic() {
       </div>
       <p class="desc">Apikey yang dibeli langsung terpasang ke nomor bot yang kamu masukkan — bukan berupa kode yang perlu ditempel manual.</p>
       <div id="akResult"></div>
+      ${state.currentUser.telegramId ? `
+      <div class="panel" style="margin-top:18px;">
+        <div class="panel-title">🔁 Pindah Apikey ke Nomor Lain</div>
+        <p class="desc">Ganti nomor WA bot yang kamu pakai? Pindahin SELURUH sisa apikey dari nomor lama ke nomor baru — nilainya apa adanya (gak nambah gak ngurangin). Kalau nomor baru sudah punya sisa apikey sebelumnya, sisa itu DITAMBAHKAN (bukan ketimpa). Nomor lama otomatis jadi 0 setelah dipindah. Cuma bisa mindahin apikey yang kamu beli sendiri (${esc(state.currentUser.username)}).</p>
+        <div class="form-row">
+          <input class="input" id="akTransferOld" placeholder="Nomor bot LAMA, contoh 6281234567890" />
+          <input class="input" id="akTransferNew" placeholder="Nomor bot BARU (tujuan)" />
+          <button class="btn btn-secondary" id="akTransferBtn">Pindahin Apikey</button>
+        </div>
+        <div id="akTransferResult"></div>
+      </div>` : `
+      <div class="panel" style="margin-top:18px;">
+        <div class="panel-title">🔁 Pindah Apikey ke Nomor Lain</div>
+        <div class="panel-title" style="margin-top:6px;">Verifikasi Telegram dulu</div>
+        <p class="desc" style="margin-bottom:14px;">Supaya apikey gak bisa dipindahin sembarangan sama orang lain, fitur ini baru aktif setelah Telegram kamu tertaut. Buka menu Profil untuk verifikasi.</p>
+        <button class="btn btn-primary" id="akTransferGoProfile">Buka Profil</button>
+      </div>`}
     </div>`;
 }
 bindHandlers.apikeys = () => {
@@ -1381,7 +1601,56 @@ bindHandlers.apikeys = () => {
     if (!manualPaymentConfigured()) { showPaymentDownScreen(); return; }
     openManualQrisModal(price, `Apikey ${amount} unit untuk ${botNumber}`, "apikey", { botNumber, amount }, buyer, onApproved);
   });
+  const akTransferGoProfileBtn = document.getElementById("akTransferGoProfile");
+  if (akTransferGoProfileBtn) akTransferGoProfileBtn.addEventListener("click", () => openUserProfileModal());
+  const transferBtn = document.getElementById("akTransferBtn");
+  if (transferBtn) transferBtn.addEventListener("click", () => {
+    const oldRaw = document.getElementById("akTransferOld").value;
+    const newRaw = document.getElementById("akTransferNew").value;
+    const resultBox = document.getElementById("akTransferResult");
+    const result = transferApikeyBalance(oldRaw, newRaw, { ownerOnly: true });
+    if (!result.ok) { notify(result.message); return; }
+    notify(`Berhasil pindahin ${result.movedAmount} unit apikey dari ${result.oldNumber} ke ${result.newNumber}.`);
+    if (resultBox) resultBox.innerHTML = `<div class="panel"><div class="panel-title">Apikey berhasil dipindah</div><div>${result.movedAmount} unit pindah dari <span class="mono">${esc(result.oldNumber)}</span> ke <span class="mono">${esc(result.newNumber)}</span>. Sisa apikey nomor lama sekarang 0.</div></div>`;
+    document.getElementById("akTransferOld").value = "";
+    document.getElementById("akTransferNew").value = "";
+    render();
+  });
 };
+
+// Pindahin SELURUH sisa apikey (apa adanya) dari satu nomor bot ke nomor bot lain.
+// Meniru transferApikeyBalance() di lib/apikeyDb.js pada script bot Telegram:
+// - Nomor tujuan yang sudah punya sisa apikey akan DITAMBAHKAN (aditif), bukan ketimpa.
+// - Nomor lama otomatis jadi 0 setelah dipindah.
+// - { ownerOnly: true } membatasi hanya ke apikey milik user yang sedang login (dipakai di halaman publik);
+//   admin panel memanggil tanpa opsi ini supaya bisa mindahin apikey milik siapa pun.
+function transferApikeyBalance(oldNumberRaw, newNumberRaw, { ownerOnly = false } = {}) {
+  const oldNumber = normalizeOwnerNumber(oldNumberRaw);
+  const newNumber = normalizeOwnerNumber(newNumberRaw);
+  if (!oldNumber) return { ok: false, message: "Isi nomor bot LAMA yang mau dipindah." };
+  if (!newNumber) return { ok: false, message: "Isi nomor bot BARU tujuan pemindahan." };
+  if (oldNumber === newNumber) return { ok: false, message: "Nomor lama dan nomor baru sama, gak ada yang perlu dipindah." };
+
+  let candidates = state.apikeys;
+  if (ownerOnly) {
+    if (!state.currentUser) return { ok: false, message: "Masuk dulu buat mindahin apikey." };
+    if (!state.currentUser.telegramId) return { ok: false, message: "Verifikasi Telegram dulu lewat menu Profil sebelum bisa mindahin apikey." };
+    const identities = [state.currentUser.username, state.currentUser.telegramId, state.currentUser.telegramUsername].filter(Boolean);
+    candidates = candidates.filter((k) => matchesIdentity(k.buyer, identities));
+  }
+  const oldRecords = candidates.filter((k) => normalizeOwnerNumber(k.botNumber) === oldNumber);
+  const movedAmount = oldRecords.reduce((sum, k) => sum + Number(k.amount || 0), 0);
+  if (movedAmount <= 0) return { ok: false, message: "Nomor lama itu belum punya sisa apikey yang bisa dipindah." };
+
+  // Sama seperti versi bot: pindah apa adanya, nilai lama otomatis jadi 0, nilai baru ditambahkan
+  // (bukan ketimpa) kalau nomor baru sudah punya apikey sebelumnya — di sini dilakukan dengan
+  // mengganti botNumber pada tiap record yang dipindah, jadi total unit di nomor baru otomatis
+  // bertambah dan histori pembelian tetap tersimpan.
+  const buyerOfMove = oldRecords[0]?.buyer || (state.currentUser && state.currentUser.username) || "";
+  oldRecords.forEach((k) => { k.botNumber = newNumber; });
+  saveKey("wm:apikeys", state.apikeys);
+  return { ok: true, movedAmount, oldNumber, newNumber, buyer: buyerOfMove };
+}
 
 function viewApikeysAdmin() {
   const s = state.settings.apikeyShop;
@@ -1392,6 +1661,16 @@ function viewApikeysAdmin() {
       <table class="table"><thead><tr><th>Nomor Bot</th><th>Pembeli</th><th>Unit</th><th>Harga</th><th>Dipasang</th><th></th></tr></thead><tbody>
         ${state.apikeys.map((k) => `<tr><td class="mono">${esc(k.botNumber || "—")}</td><td>${esc(k.buyer)}</td><td>${Number(k.amount).toLocaleString("id-ID")}</td><td>${rupiah(k.price)}</td><td class="muted">${fmtDate(k.createdAt)}</td><td><button class="btn btn-ghost btn-danger" data-revoke-key="${k.id}">Cabut</button></td></tr>`).join("")}
       </tbody></table>`}
+      <div class="panel" style="margin-top:18px;">
+        <div class="panel-title">🔁 Pindah Apikey Nomor (Semua User)</div>
+        <p class="desc">Buat bantu user ganti nomor WA bot mereka. Memindahkan SELURUH unit apikey dari nomor lama ke nomor baru milik user manapun (gak dibatasi ke akun sendiri), aditif kalau nomor baru sudah ada sisa apikey-nya. Nomor lama otomatis jadi 0.</p>
+        <div class="form-row">
+          <input class="input" id="adminAkTransferOld" placeholder="Nomor bot LAMA" />
+          <input class="input" id="adminAkTransferNew" placeholder="Nomor bot BARU (tujuan)" />
+          <button class="btn btn-secondary" id="adminAkTransferBtn">Pindahin Apikey</button>
+        </div>
+        <div id="adminAkTransferResult"></div>
+      </div>
     </div>`;
 }
 bindHandlers["a-apikeys"] = () => {
@@ -1399,6 +1678,19 @@ bindHandlers["a-apikeys"] = () => {
     state.apikeys = state.apikeys.filter((k) => k.id !== btn.dataset.revokeKey);
     saveKey("wm:apikeys", state.apikeys); notify("Apikey dicabut."); render();
   }));
+  const adminTransferBtn = document.getElementById("adminAkTransferBtn");
+  if (adminTransferBtn) adminTransferBtn.addEventListener("click", () => {
+    const oldRaw = document.getElementById("adminAkTransferOld").value;
+    const newRaw = document.getElementById("adminAkTransferNew").value;
+    const resultBox = document.getElementById("adminAkTransferResult");
+    const result = transferApikeyBalance(oldRaw, newRaw, { ownerOnly: false });
+    if (!result.ok) { notify(result.message); return; }
+    notify(`Berhasil pindahin ${result.movedAmount} unit apikey dari ${result.oldNumber} ke ${result.newNumber}.`);
+    if (resultBox) resultBox.innerHTML = `<div class="panel"><div class="panel-title">Apikey berhasil dipindah</div><div>${result.movedAmount} unit (milik ${esc(result.buyer || "-")}) pindah dari <span class="mono">${esc(result.oldNumber)}</span> ke <span class="mono">${esc(result.newNumber)}</span>.</div></div>`;
+    document.getElementById("adminAkTransferOld").value = "";
+    document.getElementById("adminAkTransferNew").value = "";
+    render();
+  });
 };
 
 // ---------------------------------------------------------------------------
