@@ -499,7 +499,7 @@ const DEFAULT_SETTINGS = {
   },
   aiWorld: { enabled: true, requireTrigger: true, triggerKeywords: ["world", "worldmd", "world md", "ai world"], cooldownSeconds: 12 },
   groq: { apiKey: "", model: "openai/gpt-oss-120b" },
-  github: { repo: "", branch: "main", token: "", path: "worldmarket-database.json", apikeyDbPath: "database/additional/apikey_db.json", quotaDbPath: "database/additional/quota_extra_db.json" },
+  github: { repo: "", branch: "main", token: "", path: "worldmarket-database.json", apikeyDbPath: "database/additional/apikey_db.json", quotaDbPath: "database/additional/quota_extra_db.json", ownerDbPath: "database/additional/owner_db.json" },
   githubRoles: { repo: "", branch: "main", token: "", path: "database/additional/role_db.json" },
   supabase: { url: "", anonKey: "", table: "kv_worldmd" },
   payment: { qrisImage: "", ownerTelegramId: "" },
@@ -1380,7 +1380,8 @@ function viewPublicDashboard() {
       <div class="hero-shimmer">${sectionHead(s.general.siteName, "Selamat datang", "Tempat beli apikey, kuota add owner, dan ngobrol sama AI World — semuanya langsung dari website ini.")}</div>
       <div class="stat-row">
         <div class="stat"><div class="stat-value" id="statApikeySold" data-countup="${totalApikeyUnits}">0</div><div class="stat-label">Unit apikey terjual</div></div>
-        <div class="stat"><div class="stat-value" id="statQuotaActive" data-countup="${activeQuotaCount}">0</div><div class="stat-label">Kuota addowner aktif</div></div>
+        <div class="stat"><div class="stat-value" id="statQuotaActive" data-countup="${activeQuotaCount}">0</div><div class="stat-label">Kuota addowner dibeli</div></div>
+        <div class="stat"><div class="stat-value" id="statRoleQuotaActive" data-countup="0">0</div><div class="stat-label">Kuota addowner dari role</div></div>
         <div class="stat"><div class="stat-value">${s.apikeyShop.enabled ? '<span class="live-dot"></span>Buka' : "Tutup"}</div><div class="stat-label">Status apikey shop</div></div>
         <div class="stat"><div class="stat-value">${s.quotaShop.enabled ? '<span class="live-dot"></span>Buka' : "Tutup"}</div><div class="stat-label">Status quota shop</div></div>
       </div>
@@ -1583,7 +1584,8 @@ function viewAdminDashboard() {
         <div class="stat"><div class="stat-value" data-countup="${state.owners.length}">0</div><div class="stat-label">Nomor di Owner DB</div></div>
         <div class="stat"><div class="stat-value" data-countup="${state.roles.length}">0</div><div class="stat-label">User di Role DB</div></div>
         <div class="stat"><div class="stat-value" id="statApikeySold" data-countup="${totalApikeyUnits}">0</div><div class="stat-label">Unit apikey terjual</div></div>
-        <div class="stat"><div class="stat-value" id="statQuotaActive" data-countup="${activeQuotaCount}">0</div><div class="stat-label">Kuota addowner aktif</div></div>
+        <div class="stat"><div class="stat-value" id="statQuotaActive" data-countup="${activeQuotaCount}">0</div><div class="stat-label">Kuota addowner dibeli</div></div>
+        <div class="stat"><div class="stat-value" id="statRoleQuotaActive" data-countup="0">0</div><div class="stat-label">Kuota addowner dari role</div></div>
         <div class="stat"><div class="stat-value" data-countup="${flaggedWarns}">0</div><div class="stat-label">User kena batas warn</div></div>
       </div>
       <div class="grid-2">
@@ -1597,9 +1599,25 @@ function viewAdminDashboard() {
           ${recent.length === 0 ? `<div class="empty">Belum ada aktivitas.</div>` : `<ul class="activity">${recent.map((r) => `<li><span class="mono muted" style="font-size:12px;">${fmtDate(r.t)}</span><span>${r.text}</span></li>`).join("")}</ul>`}
         </div>
       </div>
+      <div class="panel">
+        <div class="panel-title">Kuota addowner per role (dari GitHub, real-time)</div>
+        <p class="desc" style="margin-bottom:14px;">Diambil langsung dari <code>role_db.json</code> + <code>owner_db.json</code> asli yang ditulis bot — bukan catatan lokal browser. Butuh Repo Role DB &amp; Repo database utama sudah diisi di Pengaturan &gt; GitHub.</p>
+        <div id="roleQuotaBreakdown" class="muted">Memuat…</div>
+      </div>
     </div>`;
 }
-bindHandlers["a-dashboard"] = () => { animateCountUps(); refreshGithubDashboardStats(); };
+bindHandlers["a-dashboard"] = () => {
+  animateCountUps();
+  refreshGithubDashboardStats();
+  const el = document.getElementById("roleQuotaBreakdown");
+  if (el) {
+    getRoleQuotaTotalsRemote().then((rq) => {
+      if (!rq.ok) { el.innerHTML = `<div class="danger-text">${esc(rq.message || "Gagal memuat.")}</div>`; return; }
+      if (!rq.byRole.length) { el.innerHTML = `<div class="empty">Belum ada nomor dengan role di Role DB.</div>`; return; }
+      el.innerHTML = `<table class="table"><thead><tr><th>Role</th><th>Jumlah user</th><th>Jatah kuota</th><th>Terpakai</th><th>Sisa aktif</th></tr></thead><tbody>${rq.byRole.map((r) => `<tr><td>${esc(r.role)}</td><td>${r.holders}</td><td>${r.granted}</td><td>${r.used}</td><td>${r.remaining}</td></tr>`).join("")}</tbody></table>`;
+    });
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Owner DB (admin only)
@@ -2554,11 +2572,13 @@ async function revokeApikeyBalanceRemote(botNumber, amount, commitMessage, retri
 async function refreshGithubDashboardStats() {
   const soldEl = document.getElementById("statApikeySold");
   const quotaEl = document.getElementById("statQuotaActive");
-  if (!soldEl && !quotaEl) return;
+  const roleQuotaEl = document.getElementById("statRoleQuotaActive");
+  if (!soldEl && !quotaEl && !roleQuotaEl) return;
   const wait700 = new Promise((r) => setTimeout(r, 700)); // pastikan animateCountUps() (durasi 650ms) sudah selesai dulu, supaya angka NYATA dari GitHub ini tidak ketiban timpa animasi angka lokal
-  const [[ak, q]] = await Promise.all([Promise.all([getApikeyDbTotalsRemote(), getQuotaDbTotalsRemote()]), wait700]);
+  const [[ak, q, rq]] = await Promise.all([Promise.all([getApikeyDbTotalsRemote(), getQuotaDbTotalsRemote(), getRoleQuotaTotalsRemote()]), wait700]);
   if (soldEl) soldEl.textContent = ak.ok ? ak.totalPurchased.toLocaleString("id-ID") : soldEl.textContent;
   if (quotaEl) quotaEl.textContent = q.ok ? q.activeTotal.toLocaleString("id-ID") : quotaEl.textContent;
+  if (roleQuotaEl) roleQuotaEl.textContent = rq.ok ? rq.totalGranted.toLocaleString("id-ID") : roleQuotaEl.textContent;
 }
 
 // ---- Quota DB (GitHub) — pola read-modify-write yang sama, tapi per
@@ -2694,6 +2714,100 @@ async function revokeQuotaBalanceRemote(buyerKey, type, amount, commitMessage, r
     }
   }
   return { ok: false, message: "Gagal menghapus quota setelah beberapa kali percobaan (bentrok terus-menerus, coba lagi)." };
+}
+
+// ---------------------------------------------------------------------------
+// Kuota addowner DARI ROLE (bukan dari pembelian) — dibaca LANGSUNG dari
+// owner_db.json + role_db.json yang asli (yang beneran ditulis bot lewat
+// lib/ownerDb.js & lib/roleDb.js). Dua-duanya sudah 100% berbasis GitHub di
+// sisi bot, jadi TIDAK butuh jembatan lokal apa pun seperti kuota
+// beli/addExtraQuota — begitu bot nulis ke GitHub, angka di sini otomatis
+// ikut berubah begitu halaman ini di-refresh.
+//
+// Jatah dasar per role SAMA PERSIS dengan DEFAULT_ADDOWNER_QUOTA di
+// lib/ownerDb.js bot kamu. Kalau kamu ubah quotaMap di bot, ubah juga di
+// sini biar angkanya tetap match.
+// ---------------------------------------------------------------------------
+
+const DEFAULT_ADDOWNER_QUOTA = {
+  FULL_UP: 1,
+  RESSELER: 2,
+  PARTNER: 4,
+  OWNER: 5,
+  STAFF: 1000,
+  DEVELOPER: 5000,
+};
+
+function rolesGithubSettings() {
+  const ghr = state.settings.githubRoles || {};
+  return { repo: (ghr.repo || "").trim(), branch: (ghr.branch || "main").trim() || "main", token: (ghr.token || "").trim(), path: (ghr.path || "database/additional/role_db.json").trim() };
+}
+function ownerDbGithubSettings() {
+  const gh = state.settings.github || {};
+  return { repo: (gh.repo || "").trim(), branch: (gh.branch || "main").trim() || "main", token: (gh.token || "").trim(), path: (gh.ownerDbPath || "database/additional/owner_db.json").trim() };
+}
+
+// Baca role_db.json APA ADANYA -> { "<nomor>": "ROLE_KEY" }
+async function fetchRoleDbRemote() {
+  const cfg = rolesGithubSettings();
+  if (!cfg.repo) return { ok: false, roles: {}, message: "Repo Role DB belum diisi di Pengaturan > GitHub." };
+  try {
+    const { data } = await ghGetJson(cfg.repo, cfg.branch, cfg.token, cfg.path);
+    const roles = (data && data.roles && typeof data.roles === "object") ? data.roles : {};
+    return { ok: true, roles };
+  } catch (e) { return { ok: false, roles: {}, message: e.message }; }
+}
+
+// Baca owner_db.json APA ADANYA -> { allowedOwners: [...], addedBy: { "<invoker>": [...] } }
+async function fetchOwnerDbRemote() {
+  const cfg = ownerDbGithubSettings();
+  if (!cfg.repo) return { ok: false, allowedOwners: [], addedBy: {}, message: "Repo database utama belum diisi di Pengaturan > GitHub." };
+  try {
+    const { data } = await ghGetJson(cfg.repo, cfg.branch, cfg.token, cfg.path);
+    const allowedOwners = Array.isArray(data && data.allowedOwners) ? data.allowedOwners : [];
+    const addedBy = (data && data.addedBy && typeof data.addedBy === "object") ? data.addedBy : {};
+    return { ok: true, allowedOwners, addedBy };
+  } catch (e) { return { ok: false, allowedOwners: [], addedBy: {}, message: e.message }; }
+}
+
+// Total AGREGAT kuota addowner yang berasal dari ROLE (bukan dari pembelian) —
+// dipakai buat kartu statistik dashboard ("Kuota dari Role") dan buat rincian
+// per-role di Admin Console. Untuk tiap nomor yang punya role di role_db.json:
+//   jatah   = DEFAULT_ADDOWNER_QUOTA[role]  (0 kalau role tidak dikenali/NONE)
+//   dipakai = jumlah unique nomor di addedBy[nomor] yang MASIH ada di allowedOwners
+//   sisa    = max(0, jatah - dipakai)
+async function getRoleQuotaTotalsRemote() {
+  const [roleRes, ownerRes] = await Promise.all([fetchRoleDbRemote(), fetchOwnerDbRemote()]);
+  if (!roleRes.ok) return { ok: false, message: roleRes.message };
+  if (!ownerRes.ok) return { ok: false, message: ownerRes.message };
+
+  const allowedSet = new Set(ownerRes.allowedOwners.map((x) => String(x || "").replace(/\D/g, "")));
+  const byRole = {};
+  let totalGranted = 0, totalUsed = 0, totalRemaining = 0, roleHolderCount = 0;
+
+  for (const [number, rawRole] of Object.entries(roleRes.roles)) {
+    const role = String(rawRole || "").trim().toUpperCase().replace(/[-\s]+/g, "_");
+    const jatah = Number.isFinite(DEFAULT_ADDOWNER_QUOTA[role]) ? DEFAULT_ADDOWNER_QUOTA[role] : 0;
+    if (jatah <= 0) continue; // role NONE atau tidak dikenali -> tidak ikut dihitung
+
+    const rawList = Array.isArray(ownerRes.addedBy[number]) ? ownerRes.addedBy[number] : [];
+    const uniqUsed = new Set(rawList.map((x) => String(x || "").replace(/\D/g, "")).filter((x) => x && allowedSet.has(x)));
+    const dipakai = uniqUsed.size;
+    const sisa = Math.max(0, jatah - dipakai);
+
+    roleHolderCount++;
+    totalGranted += jatah;
+    totalUsed += Math.min(dipakai, jatah);
+    totalRemaining += sisa;
+
+    if (!byRole[role]) byRole[role] = { role, holders: 0, granted: 0, used: 0, remaining: 0 };
+    byRole[role].holders++;
+    byRole[role].granted += jatah;
+    byRole[role].used += Math.min(dipakai, jatah);
+    byRole[role].remaining += sisa;
+  }
+
+  return { ok: true, totalGranted, totalUsed, totalRemaining, roleHolderCount, byRole: Object.values(byRole).sort((a, b) => b.granted - a.granted) };
 }
 
 // ---------------------------------------------------------------------------
@@ -3102,6 +3216,7 @@ function viewSettingsGithub() {
           <label class="field"><span>Path file database utama</span><input class="input" id="ghPath" value="${esc(gh.path)}" /></label>
           <label class="field"><span>Path Apikey DB (dibaca bot WORLD MD)</span><input class="input" id="ghApikeyDbPath" value="${esc(gh.apikeyDbPath || 'database/additional/apikey_db.json')}" /></label>
           <label class="field"><span>Path Quota DB</span><input class="input" id="ghQuotaDbPath" value="${esc(gh.quotaDbPath || 'database/additional/quota_extra_db.json')}" /></label>
+          <label class="field"><span>Path Owner DB (dibaca bot WORLD MD, buat hitung kuota per role)</span><input class="input" id="ghOwnerDbPath" value="${esc(gh.ownerDbPath || 'database/additional/owner_db.json')}" /></label>
         </div>
         <div class="form-row" style="margin-top:10px;">
           <button class="btn btn-violet" id="ghSaveConfigBtn">Simpan Konfigurasi</button>
@@ -3141,6 +3256,7 @@ bindHandlers["settings-github"] = () => {
     gh.path = document.getElementById("ghPath").value.trim() || "worldmarket-database.json";
     gh.apikeyDbPath = document.getElementById("ghApikeyDbPath").value.trim() || "database/additional/apikey_db.json";
     gh.quotaDbPath = document.getElementById("ghQuotaDbPath").value.trim() || "database/additional/quota_extra_db.json";
+    gh.ownerDbPath = document.getElementById("ghOwnerDbPath").value.trim() || "database/additional/owner_db.json";
     await saveSettingsWithConfirmation("ghSaveStatus");
   });
   document.getElementById("ghBackupBtn").addEventListener("click", async () => {
