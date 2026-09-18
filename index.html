@@ -1373,15 +1373,10 @@ function currentPromoText(kind) {
 
 function viewPublicDashboard() {
   const s = state.settings;
-  const activeQuotaCount = state.quotas.filter((q) => q.type === "permanent" || q.expiresAt > now()).reduce((sum, q) => sum + Number(q.amount), 0);
-  const totalApikeyUnits = state.apikeys.reduce((sum, k) => sum + Number(k.amount), 0);
   return `
     <div class="view">
       <div class="hero-shimmer">${sectionHead(s.general.siteName, "Selamat datang", "Tempat beli apikey, kuota add owner, dan ngobrol sama AI World — semuanya langsung dari website ini.")}</div>
       <div class="stat-row">
-        <div class="stat"><div class="stat-value" id="statApikeySold" data-countup="${totalApikeyUnits}">0</div><div class="stat-label">Unit apikey terjual</div></div>
-        <div class="stat"><div class="stat-value" id="statQuotaActive" data-countup="${activeQuotaCount}">0</div><div class="stat-label">Kuota addowner dibeli</div></div>
-        <div class="stat"><div class="stat-value" id="statRoleQuotaActive" data-countup="0">0</div><div class="stat-label">Kuota addowner dari role</div></div>
         <div class="stat"><div class="stat-value">${s.apikeyShop.enabled ? '<span class="live-dot"></span>Buka' : "Tutup"}</div><div class="stat-label">Status apikey shop</div></div>
         <div class="stat"><div class="stat-value">${s.quotaShop.enabled ? '<span class="live-dot"></span>Buka' : "Tutup"}</div><div class="stat-label">Status quota shop</div></div>
       </div>
@@ -1395,7 +1390,6 @@ function viewPublicDashboard() {
 bindHandlers["p-dashboard"] = () => {
   document.querySelectorAll("[data-goto]").forEach((btn) => btn.addEventListener("click", () => { state.tab = btn.dataset.goto; renderSidebar(); render(); }));
   animateCountUps();
-  refreshGithubDashboardStats(); // timpa dengan angka NYATA dari GitHub begitu selesai dibaca
 };
 
 // ---------------------------------------------------------------------------
@@ -1567,8 +1561,6 @@ bindHandlers["p-addowner"] = () => {
 
 function viewAdminDashboard() {
   const s = state.settings;
-  const activeQuotaCount = state.quotas.filter((q) => q.type === "permanent" || q.expiresAt > now()).reduce((sum, q) => sum + Number(q.amount), 0);
-  const totalApikeyUnits = state.apikeys.reduce((sum, k) => sum + Number(k.amount), 0);
   const flaggedWarns = state.warns.filter((w) => w.count >= s.warnSystem.maxWarn).length;
   const pill = (on) => `<span class="pill ${on ? "pill-on" : "pill-off"}">${on ? "aktif" : "nonaktif"}</span>`;
   const recent = [
@@ -1583,8 +1575,6 @@ function viewAdminDashboard() {
       <div class="stat-row mode-admin-stats">
         <div class="stat"><div class="stat-value" data-countup="${state.owners.length}">0</div><div class="stat-label">Nomor di Owner DB</div></div>
         <div class="stat"><div class="stat-value" data-countup="${state.roles.length}">0</div><div class="stat-label">User di Role DB</div></div>
-        <div class="stat"><div class="stat-value" id="statApikeySold" data-countup="${totalApikeyUnits}">0</div><div class="stat-label">Unit apikey terjual</div></div>
-        <div class="stat"><div class="stat-value" id="statQuotaActive" data-countup="${activeQuotaCount}">0</div><div class="stat-label">Kuota addowner dibeli</div></div>
         <div class="stat"><div class="stat-value" id="statRoleQuotaActive" data-countup="0">0</div><div class="stat-label">Kuota addowner dari role</div></div>
         <div class="stat"><div class="stat-value" data-countup="${flaggedWarns}">0</div><div class="stat-label">User kena batas warn</div></div>
       </div>
@@ -2424,26 +2414,6 @@ async function getApikeyBalanceRemote(botNumber) {
   } catch (e) { return { ok: false, message: e.message }; }
 }
 
-// Total AGREGAT seluruh nomor di apikey_db.json — dipakai buat kartu
-// statistik dashboard ("Unit apikey terjual") supaya angkanya beneran baca
-// database GitHub, bukan cuma catatan lokal browser.
-async function getApikeyDbTotalsRemote() {
-  const cfg = apikeyGithubSettings();
-  if (!cfg.repo) return { ok: false, message: "Repo GitHub belum diisi." };
-  try {
-    const { data } = await ghGetJson(cfg.repo, cfg.branch, cfg.token, cfg.path);
-    const numbers = (data && data.numbers) || {};
-    let totalPurchased = 0, totalActiveBalance = 0, activeNumbers = 0;
-    for (const raw of Object.values(numbers)) {
-      const e = ensureApikeyEntryShape(raw);
-      totalPurchased += e.totalPurchased;
-      totalActiveBalance += e.balance;
-      if (e.balance > 0) activeNumbers++;
-    }
-    return { ok: true, totalPurchased, totalActiveBalance, activeNumbers };
-  } catch (e) { return { ok: false, message: e.message }; }
-}
-
 // Tambah saldo apikey (ADITIF, bukan overwrite) untuk 1 nomor bot — dipanggil
 // SEKALI saat admin nge-ACC order apikey. Kalau nomor itu sudah punya sisa
 // saldo di GitHub, qty baru DITAMBAHKAN ke situ. Retry otomatis kalau ada
@@ -2565,20 +2535,16 @@ async function revokeApikeyBalanceRemote(botNumber, amount, commitMessage, retri
   return { ok: false, message: "Gagal mencabut apikey setelah beberapa kali percobaan (bentrok terus-menerus, coba lagi)." };
 }
 
-// Helper dipakai kedua kartu dashboard (publik & admin): baca total NYATA
-// dari GitHub lalu timpa angka countup lokal begitu selesai — jadi kalau
+// Helper dipakai kartu dashboard admin: baca total kuota addowner dari role
+// (GitHub) lalu timpa angka countup lokal begitu selesai — jadi kalau
 // GitHub belum diisi/gagal, angka lokal (fallback) tetap kelihatan duluan,
 // tidak blank.
 async function refreshGithubDashboardStats() {
-  const soldEl = document.getElementById("statApikeySold");
-  const quotaEl = document.getElementById("statQuotaActive");
   const roleQuotaEl = document.getElementById("statRoleQuotaActive");
-  if (!soldEl && !quotaEl && !roleQuotaEl) return;
+  if (!roleQuotaEl) return;
   const wait700 = new Promise((r) => setTimeout(r, 700)); // pastikan animateCountUps() (durasi 650ms) sudah selesai dulu, supaya angka NYATA dari GitHub ini tidak ketiban timpa animasi angka lokal
-  const [[ak, q, rq]] = await Promise.all([Promise.all([getApikeyDbTotalsRemote(), getQuotaDbTotalsRemote(), getRoleQuotaTotalsRemote()]), wait700]);
-  if (soldEl) soldEl.textContent = ak.ok ? ak.totalPurchased.toLocaleString("id-ID") : soldEl.textContent;
-  if (quotaEl) quotaEl.textContent = q.ok ? q.activeTotal.toLocaleString("id-ID") : quotaEl.textContent;
-  if (roleQuotaEl) roleQuotaEl.textContent = rq.ok ? rq.totalGranted.toLocaleString("id-ID") : roleQuotaEl.textContent;
+  const [rq] = await Promise.all([getRoleQuotaTotalsRemote(), wait700]);
+  roleQuotaEl.textContent = rq.ok ? rq.totalGranted.toLocaleString("id-ID") : roleQuotaEl.textContent;
 }
 
 // ---- Quota DB (GitHub) — pola read-modify-write yang sama, tapi per
@@ -2603,24 +2569,6 @@ function ensureQuotaEntryShape(entry) {
 function quotaExtraTotal(entry) {
   const t = Date.now();
   return entry.permanent + entry.temp.filter((b) => b.expiresAt > t).reduce((a, b) => a + b.amount, 0);
-}
-// Total AGREGAT seluruh user di quota_extra_db.json — dipakai buat kartu
-// statistik dashboard ("Kuota addowner aktif").
-async function getQuotaDbTotalsRemote() {
-  const cfg = quotaGithubSettings();
-  if (!cfg.repo) return { ok: false, message: "Repo GitHub belum diisi." };
-  try {
-    const { data } = await ghGetJson(cfg.repo, cfg.branch, cfg.token, cfg.path);
-    const users = (data && data.users) || {};
-    let activeTotal = 0, activeUsers = 0;
-    for (const raw of Object.values(users)) {
-      const e = ensureQuotaEntryShape(raw);
-      const t = quotaExtraTotal(e);
-      activeTotal += t;
-      if (t > 0) activeUsers++;
-    }
-    return { ok: true, activeTotal, activeUsers };
-  } catch (e) { return { ok: false, message: e.message }; }
 }
 async function getQuotaBalanceRemote(buyerKey) {
   const cfg = quotaGithubSettings();
