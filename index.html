@@ -2349,17 +2349,29 @@ bindHandlers["aiworld-config"] = () => {
 // Migrasi Database (admin only) — pindahkan data dari repo GitHub lama ke baru
 // ---------------------------------------------------------------------------
 
+function ghNormalizeRepo(repo = "") {
+  // Samain dengan normalizeRepo() di lib/verificationGithubDb.js (bot) —
+  // lihat catatan di website_database.html.
+  return String(repo || "").trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "");
+}
 async function ghGetFile(repo, branch, token, path) {
-  const url = `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch || "main")}`;
-  const headers = { Accept: "application/vnd.github+json" };
+  repo = ghNormalizeRepo(repo);
+  // Cache-busting: lihat catatan di website_database.html — GET contents
+  // API GitHub gampang ke-cache (browser/CDN), padahal ini dipakai buat
+  // POLLING status verifikasi Telegram tiap beberapa detik ke URL yang
+  // sama persis. `_ts` + `cache:"no-store"` memastikan tiap poll benar-benar
+  // ambil versi TERBARU dari GitHub, bukan salinan lama yang ke-cache.
+  const url = `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch || "main")}&_ts=${Date.now()}`;
+  const headers = { Accept: "application/vnd.github+json", "Cache-Control": "no-cache" };
   if (token) headers.Authorization = `token ${token}`;
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Gagal ambil file (${res.status})`);
   const data = await res.json();
   return { text: b64DecodeUnicode(data.content.replace(/\n/g, "")), sha: data.sha };
 }
 async function ghPutFile(repo, branch, token, path, contentText, sha, message) {
+  repo = ghNormalizeRepo(repo);
   if (!token) throw new Error("Token repo tujuan wajib diisi untuk menulis file.");
   const url = `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(path)}`;
   const headers = { Accept: "application/vnd.github+json", Authorization: `token ${token}`, "Content-Type": "application/json" };
