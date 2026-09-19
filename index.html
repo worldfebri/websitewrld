@@ -500,7 +500,7 @@ const DEFAULT_SETTINGS = {
   aiWorld: { enabled: true, requireTrigger: true, triggerKeywords: ["world", "worldmd", "world md", "ai world"], cooldownSeconds: 12 },
   groq: { apiKey: "", model: "openai/gpt-oss-120b" },
   github: { repo: "", branch: "main", token: "", path: "worldmarket-database.json", apikeyDbPath: "database/additional/apikey_db.json", quotaDbPath: "database/additional/quota_extra_db.json", ownerDbPath: "database/additional/owner_db.json" },
-  githubRoles: { repo: "", branch: "main", token: "", path: "database/additional/role_db.json" },
+  githubRoles: { repo: "WorldMarket-dtb/khususrolemd", branch: "main", token: "", path: "database/additional/role_db.json" },
   // Repo/akun/token terpisah KHUSUS kode verifikasi Telegram (opsional).
   // Kalau repo di sini dikosongkan, otomatis fallback pakai repo/token
   // Database Utama di atas. Diisahkan supaya token yang kepakai di browser
@@ -2861,9 +2861,31 @@ const DEFAULT_ADDOWNER_QUOTA = {
   DEVELOPER: 5000,
 };
 
+// Repo Role DB kamu (isian langsung dari kamu: "WorldMarket-dtb/khususrolemd").
+// Ini dipakai sebagai fallback TERAKHIR kalau kartu "Database Role" di
+// Pengaturan > GitHub belum/tidak diisi apa-apa (baik di admin maupun kalau
+// setting tersimpan lama di Supabase masih kosong). Kalau kamu ganti nama
+// repo Role DB di kemudian hari, ganti juga nilai ini.
+const DEFAULT_ROLE_DB_REPO = "WorldMarket-dtb/khususrolemd";
+
 function rolesGithubSettings() {
   const ghr = state.settings.githubRoles || {};
-  return { repo: (ghr.repo || "").trim(), branch: (ghr.branch || "main").trim() || "main", token: (ghr.token || "").trim(), path: (ghr.path || "database/additional/role_db.json").trim() };
+  const gh = state.settings.github || {}; // fallback: Database Utama
+  // Urutan prioritas repo: (1) kartu "Database Role" kalau diisi manual di
+  // Pengaturan > GitHub, (2) kartu "Database Utama" kalau Role DB kosong
+  // (persis pola yang sudah dipakai buat path Apikey/Quota), (3) fallback
+  // terakhir ke DEFAULT_ROLE_DB_REPO di atas biar tetap kebaca walau belum
+  // ada satupun yang diisi/tersimpan.
+  const repo = (ghr.repo || gh.repo || DEFAULT_ROLE_DB_REPO).trim();
+  const branch = (ghr.branch || gh.branch || "main").trim() || "main";
+  // PENTING: token TIDAK di-hardcode di sini (token itu rahasia, bukan hal
+  // yang aman ditaruh di source code publik). Kalau repo Role DB kamu
+  // PRIVATE, kamu tetap wajib isi token di kartu "Database Role" (atau
+  // "Database Utama" sebagai fallback) di Pengaturan > GitHub — kalau
+  // repo-nya PUBLIC, dibiarkan kosong pun tetap bisa kebaca.
+  const token = (ghr.token || gh.token || "").trim();
+  const path = (ghr.path || "database/additional/role_db.json").trim();
+  return { repo, branch, token, path };
 }
 function ownerDbGithubSettings() {
   const gh = state.settings.github || {};
