@@ -548,6 +548,13 @@ let state = {
   chat: { messages: [], lastSentAt: 0, sending: false },
   migration: { fetchedText: null, fetchedFrom: null },
   inactivityTimer: null,
+  // Cache role Telegram user yang lagi login (dibaca otomatis dari role_db.json
+  // di GitHub — SAMA PERSIS dengan yang dipakai bot: roles_tg (by user id) lalu
+  // fallback roles_tg_usernames (by @username)). Dipakai supaya kuota addowner
+  // otomatis ngikutin role Telegram yang sudah terverifikasi, bukan cuma dari
+  // kuota yang dibeli manual. null = belum pernah dicek, { identityKey, ... } = cache.
+  myRoleInfo: null,
+  myRoleFetching: false,
 };
 
 // Akun user biasa (pengunjung/pembeli) — 100% terpisah dari akun admin.
@@ -1539,16 +1546,51 @@ function viewMyOrders() {
 // Quota Shop (mengikuti pola addedBy/kuota di lib/ownerDb.js pada bot).
 // ---------------------------------------------------------------------------
 
+function myRoleIdentityKey(u) {
+  return `${u?.telegramId || ""}|${u?.telegramUsername || ""}`;
+}
+
+// Kuota addowner user = jatah dari ROLE Telegram yang terverifikasi (otomatis,
+// dibaca dari role_db.json — lihat fetchMyRoleQuota) DITAMBAH kuota yang sudah
+// dibeli manual di Quota Shop. Jadi kalau role Telegram user itu "FULL UP",
+// dia otomatis dapat jatah dasar 1 (ikut DEFAULT_ADDOWNER_QUOTA.FULL_UP) tanpa
+// perlu beli apa-apa; kalau rolenya "RESSELER" otomatis dapat 2, dst.
 function getMyOwnerQuotaInfo() {
   const u = state.currentUser;
-  if (!u) return { identities: [], totalQuota: 0, used: 0, remaining: 0, myOwners: [] };
+  if (!u) return { identities: [], totalQuota: 0, purchasedQuota: 0, baseQuota: 0, role: "NONE", roleLoading: false, roleError: "", used: 0, remaining: 0, myOwners: [] };
   const identities = [u.username, u.telegramId, u.telegramUsername].filter(Boolean);
-  const totalQuota = state.quotas
+  const purchasedQuota = state.quotas
     .filter((q) => matchesIdentity(q.buyer, identities) && (q.type === "permanent" || q.expiresAt > now()))
     .reduce((sum, q) => sum + Number(q.amount || 0), 0);
+
+  const key = myRoleIdentityKey(u);
+  const cached = state.myRoleInfo && state.myRoleInfo.identityKey === key ? state.myRoleInfo : null;
+  const roleLoading = !!u.telegramId && !cached && state.myRoleFetching;
+  const baseQuota = cached && cached.ok ? cached.baseQuota : 0;
+  const role = cached && cached.ok ? cached.role : "NONE";
+  const roleError = cached && !cached.ok ? (cached.message || "") : "";
+
+  const totalQuota = baseQuota + purchasedQuota;
   const myOwners = state.owners.filter((o) => matchesIdentity(o.addedBy, identities));
   const used = myOwners.length;
-  return { identities, totalQuota, used, remaining: Math.max(0, totalQuota - used), myOwners };
+  return { identities, totalQuota, purchasedQuota, baseQuota, role, roleLoading, roleError, used, remaining: Math.max(0, totalQuota - used), myOwners };
+}
+
+// Panggil ini tiap kali halaman Add/Hapus Owner dibuka: kalau role belum
+// pernah dicek (atau identitas Telegram user berubah), ambil ulang dari
+// GitHub lalu render ulang begitu hasilnya datang.
+function ensureMyRoleQuotaLoaded() {
+  const u = state.currentUser;
+  if (!u || !u.telegramId) return;
+  const key = myRoleIdentityKey(u);
+  if (state.myRoleInfo && state.myRoleInfo.identityKey === key) return;
+  if (state.myRoleFetching) return;
+  state.myRoleFetching = true;
+  fetchMyRoleQuota(u.telegramId, u.telegramUsername).then((res) => {
+    state.myRoleFetching = false;
+    state.myRoleInfo = { identityKey: key, ...res };
+    if (state.currentUser && myRoleIdentityKey(state.currentUser) === key && state.tab === "p-addowner") render();
+  });
 }
 
 function viewAddOwnerSelf() {
@@ -1571,15 +1613,26 @@ function viewAddOwnerSelf() {
       </div>`;
   }
   const info = getMyOwnerQuotaInfo();
+  const roleRowHtml = info.roleLoading
+    ? `<div class="panel"><div class="panel-title">Role Telegram kamu</div><p class="desc" style="margin:0;">🔎 Mendeteksi role dari Telegram ID/username yang tertaut...</p></div>`
+    : `<div class="panel">
+        <div class="panel-title">Role Telegram kamu (otomatis)</div>
+        <div class="kv"><span>Role terdeteksi</span><strong>${esc(formatRoleLabel(info.role))}</strong></div>
+        <div class="kv"><span>Jatah kuota dari role ini</span><strong>${info.baseQuota}</strong></div>
+        <div class="kv"><span>Kuota tambahan dari pembelian</span><strong>${info.purchasedQuota}</strong></div>
+        <p class="desc" style="margin:10px 0 0;">Dibaca otomatis dari <code>role_db.json</code> berdasarkan Telegram ID/username yang tertaut di Profil — sama seperti bot. Kalau role kamu diubah developer lewat bot, jatah di sini ikut berubah otomatis (refresh halaman ini).</p>
+        ${info.roleError ? `<p class="desc" style="margin-top:8px;color:var(--danger,#e5484d);">⚠️ ${esc(info.roleError)}</p>` : ""}
+      </div>`;
   return `
     <div class="view">
-      ${sectionHead("Add/Hapus Owner", "Tambah & hapus owner sendiri", "Versi website dari perintah /addowner dan /delowner di bot WhatsApp. Kuota dipotong dari kuota addowner yang sudah kamu beli di Quota Shop.")}
+      ${sectionHead("Add/Hapus Owner", "Tambah & hapus owner sendiri", "Versi website dari perintah /addowner dan /delowner di bot WhatsApp. Kuota = jatah otomatis dari role Telegram kamu + kuota yang sudah kamu beli di Quota Shop.")}
+      ${roleRowHtml}
       <div class="stat-row">
         <div class="stat"><div class="stat-value">${info.totalQuota}</div><div class="stat-label">Kuota addowner kamu</div></div>
         <div class="stat"><div class="stat-value">${info.used}</div><div class="stat-label">Sudah terpakai</div></div>
         <div class="stat"><div class="stat-value">${info.remaining}</div><div class="stat-label">Sisa kuota</div></div>
       </div>
-      ${info.totalQuota === 0 ? `<div class="empty">Kamu belum punya kuota addowner. <a href="#" data-goto="quotas" style="color:var(--amber);">Beli kuota dulu di Quota Shop</a>.</div>` : ""}
+      ${info.totalQuota === 0 && !info.roleLoading ? `<div class="empty">Kamu belum punya kuota addowner (role kamu belum diset developer & belum beli tambahan). <a href="#" data-goto="quotas" style="color:var(--amber);">Beli kuota dulu di Quota Shop</a>.</div>` : ""}
       <div class="panel">
         <div class="panel-title">/addowner — Tambah owner baru</div>
         <div class="form-row">
@@ -1599,6 +1652,7 @@ function viewAddOwnerSelf() {
     </div>`;
 }
 bindHandlers["p-addowner"] = () => {
+  ensureMyRoleQuotaLoaded();
   const goProfileBtn = document.getElementById("addownerGoProfile");
   if (goProfileBtn) goProfileBtn.addEventListener("click", () => openUserProfileModal());
 
@@ -2817,14 +2871,58 @@ function ownerDbGithubSettings() {
 }
 
 // Baca role_db.json APA ADANYA -> { "<nomor>": "ROLE_KEY" }
+// Sekalian ambil roles_tg (key = telegram user id) & roles_tg_usernames
+// (key = @username tanpa "@", lowercase) — dua field ini yang ditulis bot
+// Telegram (lihat telegram_bot/roleDbTelegram.js), dipakai buat deteksi
+// role otomatis dari akun website yang sudah tertaut Telegram.
 async function fetchRoleDbRemote() {
   const cfg = rolesGithubSettings();
-  if (!cfg.repo) return { ok: false, roles: {}, message: "Repo Role DB belum diisi di Pengaturan > GitHub." };
+  if (!cfg.repo) return { ok: false, roles: {}, rolesTg: {}, rolesTgUsernames: {}, message: "Repo Role DB belum diisi di Pengaturan > GitHub." };
   try {
     const { data } = await ghGetJson(cfg.repo, cfg.branch, cfg.token, cfg.path);
     const roles = (data && data.roles && typeof data.roles === "object") ? data.roles : {};
-    return { ok: true, roles };
-  } catch (e) { return { ok: false, roles: {}, message: e.message }; }
+    const rolesTg = (data && data.roles_tg && typeof data.roles_tg === "object") ? data.roles_tg : {};
+    const rolesTgUsernames = (data && data.roles_tg_usernames && typeof data.roles_tg_usernames === "object") ? data.roles_tg_usernames : {};
+    return { ok: true, roles, rolesTg, rolesTgUsernames };
+  } catch (e) { return { ok: false, roles: {}, rolesTg: {}, rolesTgUsernames: {}, message: e.message }; }
+}
+
+// Deteksi role Telegram user yang sudah terverifikasi/tertaut ke akun
+// website (state.currentUser.telegramId / telegramUsername), lalu hitung
+// jatah kuota addowner dasarnya — SAMA PERSIS logika bot: cek roles_tg
+// (by user id) dulu, kalau kosong baru fallback ke roles_tg_usernames
+// (by @username). Hasilnya dipakai getMyOwnerQuotaInfo() supaya kuota
+// addowner otomatis "ngikutin" role (contoh: FULL UP -> jatah 1, RESSELER
+// -> jatah 2, dst, sesuai DEFAULT_ADDOWNER_QUOTA di atas).
+async function fetchMyRoleQuota(telegramId, telegramUsername) {
+  const cfg = rolesGithubSettings();
+  if (!cfg.repo) return { ok: false, role: "NONE", baseQuota: 0, message: "Repo Role DB belum diisi di Pengaturan > GitHub." };
+
+  const tgId = String(telegramId || "").replace(/\D/g, "");
+  const uname = String(telegramUsername || "").trim().replace(/^@/, "").toLowerCase();
+  if (!tgId && !uname) return { ok: false, role: "NONE", baseQuota: 0, message: "Telegram belum tertaut." };
+
+  const rr = await fetchRoleDbRemote();
+  if (!rr.ok) return { ok: false, role: "NONE", baseQuota: 0, message: rr.message };
+
+  let rawRole = "";
+  if (tgId && rr.rolesTg[tgId]) rawRole = rr.rolesTg[tgId];
+  if (!rawRole && uname && rr.rolesTgUsernames[uname]) rawRole = rr.rolesTgUsernames[uname];
+
+  const role = String(rawRole || "NONE").trim().toUpperCase().replace(/[-\s]+/g, "_") || "NONE";
+  const baseQuota = Number.isFinite(DEFAULT_ADDOWNER_QUOTA[role]) ? DEFAULT_ADDOWNER_QUOTA[role] : 0;
+  return { ok: true, role, baseQuota };
+}
+
+function formatRoleLabel(role) {
+  const r = String(role || "NONE").trim().toUpperCase();
+  if (r === "FULL_UP") return "FULL UP";
+  if (r === "RESSELER") return "RESSELER";
+  if (r === "PARTNER") return "PARTNER";
+  if (r === "STAFF") return "STAFF";
+  if (r === "OWNER") return "OWNER";
+  if (r === "DEVELOPER") return "DEVELOPER";
+  return "NONE";
 }
 
 // Baca owner_db.json APA ADANYA -> { allowedOwners: [...], addedBy: { "<invoker>": [...] } }
