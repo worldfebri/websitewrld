@@ -501,6 +501,12 @@ const DEFAULT_SETTINGS = {
   groq: { apiKey: "", model: "openai/gpt-oss-120b" },
   github: { repo: "", branch: "main", token: "", path: "worldmarket-database.json", apikeyDbPath: "database/additional/apikey_db.json", quotaDbPath: "database/additional/quota_extra_db.json", ownerDbPath: "database/additional/owner_db.json" },
   githubRoles: { repo: "WorldMarket-dtb/khususrolemd", branch: "main", token: "", path: "database/additional/role_db.json" },
+  // Override role DEVELOPER manual dari Admin Panel — daftar Telegram ID
+  // (bukan username, ID numerik permanen) yang MAU BAGAIMANAPUN role dia di
+  // role_db.json (GitHub), website tetap anggap dia DEVELOPER (kuota &
+  // hak-hak yang ngikutin role DEVELOPER). Maksimal 5 ID. Ini murni override
+  // sisi WEBSITE saja — tidak mengubah role_db.json ataupun bot Telegram-nya.
+  developerOverride: { ids: [] },
   // Repo/akun/token terpisah KHUSUS kode verifikasi Telegram (opsional).
   // Kalau repo di sini dikosongkan, otomatis fallback pakai repo/token
   // Database Utama di atas. Diisahkan supaya token yang kepakai di browser
@@ -1569,11 +1575,12 @@ function getMyOwnerQuotaInfo() {
   const baseQuota = cached && cached.ok ? cached.baseQuota : 0;
   const role = cached && cached.ok ? cached.role : "NONE";
   const roleError = cached && !cached.ok ? (cached.message || "") : "";
+  const roleIsOverride = !!(cached && cached.ok && cached.isOverride);
 
   const totalQuota = baseQuota + purchasedQuota;
   const myOwners = state.owners.filter((o) => matchesIdentity(o.addedBy, identities));
   const used = myOwners.length;
-  return { identities, totalQuota, purchasedQuota, baseQuota, role, roleLoading, roleError, used, remaining: Math.max(0, totalQuota - used), myOwners };
+  return { identities, totalQuota, purchasedQuota, baseQuota, role, roleLoading, roleError, roleIsOverride, used, remaining: Math.max(0, totalQuota - used), myOwners };
 }
 
 // Panggil ini tiap kali halaman Add/Hapus Owner dibuka: kalau role belum
@@ -1617,10 +1624,10 @@ function viewAddOwnerSelf() {
     ? `<div class="panel"><div class="panel-title">Role Telegram kamu</div><p class="desc" style="margin:0;">🔎 Mendeteksi role dari Telegram ID/username yang tertaut...</p></div>`
     : `<div class="panel">
         <div class="panel-title">Role Telegram kamu (otomatis)</div>
-        <div class="kv"><span>Role terdeteksi</span><strong>${esc(formatRoleLabel(info.role))}</strong></div>
+        <div class="kv"><span>Role terdeteksi</span><strong>${esc(formatRoleLabel(info.role))}${info.roleIsOverride ? ` <span class="pill pill-on" style="margin-left:6px;">Override Admin</span>` : ""}</strong></div>
         <div class="kv"><span>Jatah kuota dari role ini</span><strong>${info.baseQuota}</strong></div>
         <div class="kv"><span>Kuota tambahan dari pembelian</span><strong>${info.purchasedQuota}</strong></div>
-        <p class="desc" style="margin:10px 0 0;">Dibaca otomatis dari <code>role_db.json</code> berdasarkan Telegram ID/username yang tertaut di Profil — sama seperti bot. Kalau role kamu diubah developer lewat bot, jatah di sini ikut berubah otomatis (refresh halaman ini).</p>
+        <p class="desc" style="margin:10px 0 0;">${info.roleIsOverride ? "Role DEVELOPER ini dipasang manual oleh admin (Telegram ID kamu ada di daftar override), jadi berlaku terlepas dari role kamu di <code>role_db.json</code>." : `Dibaca otomatis dari <code>role_db.json</code> berdasarkan Telegram ID/username yang tertaut di Profil — sama seperti bot. Kalau role kamu diubah developer lewat bot, jatah di sini ikut berubah otomatis (refresh halaman ini).`}</p>
         ${info.roleError ? `<p class="desc" style="margin-top:8px;color:var(--danger,#e5484d);">⚠️ ${esc(info.roleError)}</p>` : ""}
       </div>`;
   return `
@@ -2868,6 +2875,41 @@ const DEFAULT_ADDOWNER_QUOTA = {
 // repo Role DB di kemudian hari, ganti juga nilai ini.
 const DEFAULT_ROLE_DB_REPO = "WorldMarket-dtb/khususrolemd";
 
+// ---------------------------------------------------------------------------
+// Override Role DEVELOPER manual dari Admin Panel (maks. 5 Telegram ID) —
+// lihat kartu "Override Role DEVELOPER" di Pengaturan > GitHub. Kalau
+// Telegram ID user ada di daftar ini, website MEMAKSA role dia jadi
+// DEVELOPER, apa pun yang tertulis di role_db.json (GitHub) — bahkan kalau
+// di sana dia NONE / belum pernah diset sama sekali. Murni override sisi
+// website, tidak menyentuh role_db.json ataupun bot Telegram.
+// ---------------------------------------------------------------------------
+function getDeveloperOverrideIds() {
+  const raw = Array.isArray(state.settings?.developerOverride?.ids) ? state.settings.developerOverride.ids : [];
+  const cleaned = Array.from(new Set(raw.map((x) => String(x || "").replace(/\D/g, "")).filter(Boolean)));
+  return cleaned.slice(0, 5);
+}
+
+function renderDevOverrideList() {
+  const el = document.getElementById("devOverrideList");
+  if (!el) return;
+  const ids = getDeveloperOverrideIds();
+  if (!ids.length) {
+    el.innerHTML = `<div class="muted" style="font-size:13px;">Belum ada ID di daftar override (0/5).</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="muted" style="font-size:12px;margin-bottom:6px;">${ids.length}/5 ID terpasang:</div>` +
+    ids.map((id) => `<div class="kv"><span class="mono">${esc(id)}</span><button class="btn btn-ghost btn-danger" data-remove-dev-override="${esc(id)}" style="padding:4px 10px;">Hapus</button></div>`).join("");
+  el.querySelectorAll("[data-remove-dev-override]").forEach((btn) => btn.addEventListener("click", async () => {
+    const id = btn.dataset.removeDevOverride;
+    const list = getDeveloperOverrideIds().filter((x) => x !== id);
+    state.settings.developerOverride = { ids: list };
+    const statusEl = document.getElementById("devOverrideStatus");
+    if (statusEl) { statusEl.textContent = "Menyimpan…"; statusEl.className = "muted"; }
+    await saveSettingsWithConfirmation("devOverrideStatus");
+    renderDevOverrideList();
+  }));
+}
+
 function rolesGithubSettings() {
   const ghr = state.settings.githubRoles || {};
   const gh = state.settings.github || {}; // fallback: Database Utama
@@ -2917,12 +2959,18 @@ async function fetchRoleDbRemote() {
 // addowner otomatis "ngikutin" role (contoh: FULL UP -> jatah 1, RESSELER
 // -> jatah 2, dst, sesuai DEFAULT_ADDOWNER_QUOTA di atas).
 async function fetchMyRoleQuota(telegramId, telegramUsername) {
-  const cfg = rolesGithubSettings();
-  if (!cfg.repo) return { ok: false, role: "NONE", baseQuota: 0, message: "Repo Role DB belum diisi di Pengaturan > GitHub." };
-
   const tgId = String(telegramId || "").replace(/\D/g, "");
   const uname = String(telegramUsername || "").trim().replace(/^@/, "").toLowerCase();
   if (!tgId && !uname) return { ok: false, role: "NONE", baseQuota: 0, message: "Telegram belum tertaut." };
+
+  // Override Admin Panel menang mutlak, dicek DULUAN sebelum ke GitHub sama
+  // sekali — jadi tetap jalan walau Repo Role DB belum/gak kesambung.
+  if (tgId && getDeveloperOverrideIds().includes(tgId)) {
+    return { ok: true, role: "DEVELOPER", baseQuota: DEFAULT_ADDOWNER_QUOTA.DEVELOPER, isOverride: true };
+  }
+
+  const cfg = rolesGithubSettings();
+  if (!cfg.repo) return { ok: false, role: "NONE", baseQuota: 0, message: "Repo Role DB belum diisi di Pengaturan > GitHub." };
 
   const rr = await fetchRoleDbRemote();
   if (!rr.ok) return { ok: false, role: "NONE", baseQuota: 0, message: rr.message };
@@ -3435,6 +3483,17 @@ function viewSettingsGithub() {
       </div>
 
       <div class="panel">
+        <div class="panel-title">Override Role DEVELOPER (khusus website, maks. 5 ID)</div>
+        <p class="desc" style="margin-bottom:14px;">Tempel Telegram ID (angka, BUKAN username) yang mau kamu paksa jadi role <strong>DEVELOPER</strong> di website ini — apa pun role ID itu di <code>role_db.json</code> (GitHub), termasuk kalau di GitHub rolenya lebih rendah atau bahkan belum diset sama sekali (NONE), website tetap anggap dia DEVELOPER (dapat jatah kuota addowner ${DEFAULT_ADDOWNER_QUOTA.DEVELOPER}). Ini murni override sisi website — <strong>tidak mengubah</strong> isi <code>role_db.json</code> ataupun cara bot Telegram-nya menilai role. Maksimal 5 ID.</p>
+        <div class="form-row">
+          <input class="input" id="devOverrideIdInput" placeholder="Telegram ID, contoh 123456789" inputmode="numeric" />
+          <button class="btn btn-violet" id="devOverrideAddBtn">Tambah</button>
+        </div>
+        <div id="devOverrideList" style="margin-top:12px;"></div>
+        <div id="devOverrideStatus" class="muted" style="font-size:13px; margin-top:10px;"></div>
+      </div>
+
+      <div class="panel">
         <div class="panel-title">GitHub Verifikasi Telegram — repo/akun terpisah (opsional)</div>
         <p class="desc" style="margin-bottom:14px;">Kode verifikasi Telegram (menu Profil) ditulis ke file <code>${esc(gv.path || DEFAULT_VERIFICATIONS_DB_PATH)}</code>. Repo/token di sini dipakai bot kamu juga — samakan dengan <code>config.js</code> bagian <code>githubVerification</code> (atau <code>github</code> kalau kartu ini dikosongkan). <strong>Kosongkan "Repo" di sini</strong> kalau mau tetap pakai repo/token Database Utama di atas (tidak perlu akun terpisah). Isi kalau mau pakai akun/repo/token GitHub yang BENAR-BENAR berbeda khusus untuk verifikasi.</p>
         <div class="grid-2">
@@ -3494,6 +3553,26 @@ bindHandlers["settings-github"] = () => {
       await ghPutFile(ghr.repo, ghr.branch, ghr.token, ghr.path, buildRolesExport(), sha, "Backup Role DB dari WorldMarket Panel");
       statusEl.textContent = `Berhasil disimpan ke ${ghr.repo}/${ghr.path}.`; statusEl.className = "ok-text";
     } catch (e) { statusEl.textContent = "Gagal backup: " + e.message; statusEl.className = "danger-text"; }
+  });
+
+  renderDevOverrideList();
+  document.getElementById("devOverrideAddBtn").addEventListener("click", async () => {
+    const statusEl = document.getElementById("devOverrideStatus");
+    const input = document.getElementById("devOverrideIdInput");
+    const raw = String(input.value || "").replace(/\D/g, "");
+    if (!raw) { statusEl.textContent = "Isi Telegram ID (angka) dulu."; statusEl.className = "danger-text"; return; }
+    const list = getDeveloperOverrideIds();
+    if (list.includes(raw)) { statusEl.textContent = `ID ${raw} sudah ada di daftar.`; statusEl.className = "danger-text"; return; }
+    if (list.length >= 5) { statusEl.textContent = "Sudah maksimal 5 ID. Hapus salah satu dulu kalau mau ganti."; statusEl.className = "danger-text"; return; }
+    list.push(raw);
+    state.settings.developerOverride = { ids: list };
+    input.value = "";
+    statusEl.textContent = "Menyimpan…"; statusEl.className = "muted";
+    await saveSettingsWithConfirmation("devOverrideStatus");
+    renderDevOverrideList();
+  });
+  document.getElementById("devOverrideIdInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("devOverrideAddBtn").click();
   });
 
   document.getElementById("gvSaveConfigBtn").addEventListener("click", async () => {
